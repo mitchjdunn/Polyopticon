@@ -2,9 +2,9 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv2.imread('test.jpg',0)
+img = cv2.imread('videostills/0000000011.jpg',0)
 img2 = img.copy()
-template = cv2.imread('irled.jpg',0)
+template = cv2.imread('stills/irled.jpg',0)
 w, h = template.shape[::-1]
 
 # All the 6 methods for comparison in a list
