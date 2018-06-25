@@ -2,7 +2,7 @@ import cv2
 import math
 import numpy as np
 import socket
-class whiteboardView:
+class cvHelper:
 
     def __init__(self_):
         print(starting)
@@ -18,9 +18,9 @@ class whiteboardView:
         return(top_left, bottom_right)
        
     def templateMatch2(img,template):
-        #template = whiteboardView.colorSelect(template)
-        #img2= whiteboardView.colorSelect(img)
-        r1,r2 = whiteboardView.templateMatch(img2, template)
+        #template = cvHelper.colorSelect(template)
+        #img2= cvHelper.colorSelect(img)
+        r1,r2 = cvHelper.templateMatch(img2, template)
         return cv2.rectangle(img,r1,r2, (0,0,255),2)
 
     def detectCircle(img):
@@ -87,10 +87,10 @@ class whiteboardView:
     #w, h = template.shape[::-1]
 
     def showRectangle(img):
-        img2 = whiteboardView.threshold(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+        img2 = cvHelper.threshold(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
         cv2.imshow('img2',img2)
         #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        rectangles = whiteboardView.detectRectangle(img2)
+        rectangles = cvHelper.detectRectangle(img2)
                 
         for x1,y1,x2,y2 in rectangles:
             img = cv2.line(img,(x1,y1),(x2,y2),(255,0,0),2)
@@ -98,18 +98,34 @@ class whiteboardView:
         cv2.waitKey()
 
     def findOrigin(img):
-        img = whiteboardView.threshold(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+        img = cvHelper.threshold(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
         #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        rectangles = whiteboardView.detectRectangle(img)
+        rectangles = cvHelper.detectRectangle(img)
         return(min(rectangles[:,0]),min(rectangles[:,1]))
 
     def findBorderByTemplate(img, template):
-        img = whiteboardView.colorSelect2(img)
-        return whiteboardView.templateMatch2(img, template)
+        img = cvHelper.colorSelect2(img)
+        return cvHelper.templateMatch2(img, template)
+    def rotatedRectangle(img):
+        img2 = cvHelper.colorSelect2(img)
+        img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        #img2 = (255-img2)
+        modes=[cv2.RETR_EXTERNAL, cv2.RETR_LIST, cv2.RETR_CCOMP, cv2.RETR_TREE, cv2.RETR_FLOODFILL]
+        methods=[cv2.CHAIN_APPROX_NONE, cv2.CHAIN_APPROX_SIMPLE]
+        _,contours,_ = cv2.findContours(img2,modes[3], methods[0])
+        print(contours)
+        rect = cv2.minAreaRect(contours[0])
+        box = cv2.boxPoints(rect)
+        box = np.int0(box)
+        print("this is box")
+        print([box])
+        cv2.imshow('img2',img2)
+        return cv2.drawContours(img, [box], 0,(0,0,255),2)
     #goes frame by frame and shows how function effects the video
     #function must take an unedited image as the only parameter.
     #and return the edited image
     def showEditedVideo(filename, function, args= None):
+        
         cap = cv2.VideoCapture(filename)
         ret, img = cap.read()
         cv2.waitKey(50)
@@ -124,8 +140,8 @@ class whiteboardView:
             ret, img = cap.read()
             
     def detectLED(img):
-        img2 = whiteboardView.colorSelect(img)
-        circles = whiteboardView.detectCircle(cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY))
+        img2 = cvHelper.colorSelect(img)
+        circles = cvHelper.detectCircle(cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY))
         for x,y,r in circles:
             img = cv2.circle(img2, (x,y),r,(0,250,0),2)
         
@@ -137,7 +153,7 @@ class whiteboardView:
         tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN']
         tracker_type = tracker_types[3]
      
-        template = whiteboardView.colorSelect(cv2.imread('LEDTemplate.png'))
+        template = cvHelper.colorSelect(cv2.imread('LEDTemplate.png'))
         if int(minor_ver) < 3:
             tracker = cv2.Tracker_create(tracker_type)
         else:
@@ -160,9 +176,9 @@ class whiteboardView:
 
       
         while ok:
-            img2 = whiteboardView.colorSelect(img)
+            img2 = cvHelper.colorSelect(img)
             if not LED:
-                box = whiteboardView.templateMatch(img2, template)
+                box = cvHelper.templateMatch(img2, template)
                 print('no LED')
                 #in border
                 if box[0][0] > 500 and box[1][0] < 1630 and box[0][1] > 25 and box[1][1] < 680:
@@ -184,19 +200,20 @@ class whiteboardView:
             ok, img = cap.read()
             cv2.waitKey()
     def templateCircles(img, template):
-        img2 = whiteboardView.colorSelect(img)
-        circles = whiteboardView.detectCircle(cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY))
-        box = whiteboardView.templateMatch(img2, template)
+        img2 = cvHelper.colorSelect(img)
+        circles = cvHelper.detectCircle(cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY))
+        box = cvHelper.templateMatch(img2, template)
         for x,y,r in circles:
             img = cv2.circle(img, (x,y),r,(0,250,0),2)
         img = cv2.rectangle(img, box[0],box[1], (0,0,255), 2)
         return img
  
 
-whiteboardView.detectLED('tests/piTests/vid/demotest-20s--41-full.mp4', cv2.imread('LEDTemplate.png'))
-#whiteboardView.trackLED()
-#whiteboardView.showEditedVideo('tests/piTests/vid/demotest-20s--41-full.mp4', whiteboardView.colorSelect)
-#whiteboardView.showEditedVideo('tests/vid/demotest-20s-30f-2-full.h264', whiteboardView.templateMatch2, args=(cv2.imread('LEDTemplate.png'),))
-#whiteboardView.showEditedVideo('tests/vid/demotest-20s-30f-2-full.h264', whiteboardView.colorSelect2)
+#cvHelper.detectLED('tests/piTests/vid/demotest-20s--41-full.mp4', cv2.imread('LEDTemplate.png'))
+#cvHelper.trackLED()
+#cvHelper.showEditedVideo('tests/piTests/vid/demotest-20s--41-full.mp4', cvHelper.colorSelect)
+print("hello")
+cvHelper.showEditedVideo('tests/vids/projtest7.mp4', cvHelper.rotatedRectangle)
+#cvHelper.showEditedVideo('tests/vid/demotest-20s-30f-2-full.h264', cvHelper.colorSelect2)
 cv2.waitKey()
 cv2.destroyAllWindows()
