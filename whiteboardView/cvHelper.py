@@ -213,7 +213,7 @@ class cvHelper:
 #cvHelper.trackLED()
 #cvHelper.showEditedVideo('tests/piTests/vid/demotest-20s--41-full.mp4', cvHelper.colorSelect)
 print("hello")
-cvHelper.showEditedVideo('tests/vids/projtest7.mp4', cvHelper.rotatedRectangle)
+cvHelper.showEditedVideo('tests/piTests/vid/tvtest.mp4', cvHelper.rotatedRectangle)
 #cvHelper.showEditedVideo('tests/vid/demotest-20s-30f-2-full.h264', cvHelper.colorSelect2)
 cv2.waitKey()
 cv2.destroyAllWindows()
