@@ -37,7 +37,7 @@ class Border:
                 print("no rectangle")
             return
         box = cv2.boxPoints(rect)
-        box = tuple([tuple(x) for x in box])
+        box = tuple([tuple([int(x), int(y)]) for x,y in box])
         print(box, "Box")
         if (abs(box[0][0] - box[1][0]) > 600 or abs(box[0][0] - box[2][0]) > 600) and (abs(box[0][1] - box[1][1]) > 300 or abs(box[0][1] - box[2][1]) > 300):
             self.potentialBorder.update((box,))
@@ -78,11 +78,13 @@ class Border:
         return [xPos / self.width, yPos / self.Height]
 
     def inBorder(self, point):
-        topLine = (point[1] - self.origin[1] + self.origin[0] * self.slope) / self.slope
-        bottomLine = (point[1] - self.bottomLeft[1] + self.bottomLeft[0] * self.slope) / self.slope
-        leftLine = (point[0] - self.origin[0]) / self.slope + self.origin[1]
-        rightLine = (point[0] - self.topRight[0]) / self.slope + self.topRight[1]
-        if point[0] > topLine and point[0] < bottomLine and point[1] > leftLine and point[1] < rightLine:
+        borderBuffer = 5
+        topLine = (point[0] - self.origin[0]) * self.slope + self.origin[1] 
+        bottomLine = (point[0] - self.bottomLeft[0]) *  self.slope + self.bottomLeft[1] 
+        leftLine = (point[1] - self.origin[1] + self.origin[0] / self.slope) * self.slope
+        rightLine = (point[1] - self.topRight[1] + self.topRight[0] / self.slope) * self.slope
+        print("point: ", point, 'topLine: ', topLine, 'bottomLine: ', bottomLine)
+        if point[0] > topLine + borderBuffer and point[0] < bottomLine + borderBuffer and point[1] > leftLine + borderBuffer and point[1] < rightLine - borderBuffer:
             return True
 
         return False
@@ -116,28 +118,28 @@ class Whiteboard:
         #CHECKING FOR BORDER
         if self.border is None:
             self.border = Border()
-            cv2.imshow('nathin',img)
-            return
         if not self.border.borderFound():
             #CHANGE IMG BEFORE FINDBORDER
             img2 = cvHelper.colorSelect2(img)
             img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
             self.border.findBorder(img2)
-            cv2.imshow('nathin2', img)
+            cv2.imshow('nathin', img)
             print(self.border.potentialBorder)
             return
             
         #SHOW BORDER
         box = np.int0(self.border.borderboundries)
-        cv2.imshow("border", cv2.drawContours(img, [box], 0,(0,0,255), 2))
+        img2 = img
+        cv2.imshow("border", cv2.drawContours(img2, [box], 0,(0,0,255), 2))
         
         
         #CHECKING FOR LED
         img2 = cvHelper.colorSelect2(img)
         img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
         LED = self.detectLED(img2)
+        img2 = img
         if LED is not None:
-            cv2.imshow("LED", cv2.circle(img,LED, 5, (255,0,0), 1))
+            cv2.imshow("LED", cv2.circle(img2,LED, 5, (255,0,0), 1))
 
     def runVideo(self, videoPath):
         if self.debug:
@@ -150,21 +152,22 @@ class Whiteboard:
         while ret:
             self.nextFrame(img)
             cv2.waitKey()
+            ret, img = cap.read()
 
     def detectLED(self, img):
 
         modes=[cv2.RETR_EXTERNAL, cv2.RETR_LIST, cv2.RETR_CCOMP, cv2.RETR_TREE, cv2.RETR_FLOODFILL]
         methods=[cv2.CHAIN_APPROX_NONE, cv2.CHAIN_APPROX_SIMPLE]
         #manage contours somehow??
-        _,contours,_ = cv2.findContours(img,modes[1], methods[0])
+        _,contours,_ = cv2.findContours(img,modes[3], methods[0])
         rect = cv2.minAreaRect(contours[0])
         box = cv2.boxPoints(rect)
         box = tuple([tuple(x) for x in box])
         topRight = sorted(sorted(box)[2:], key = lambda x : x[1])[0]
         bottomLeft  = sorted(sorted(box)[:2], key = lambda x : x [1])[1]
         print(box)
-        if self.border.inBorder(((topRight[0] + bottomLeft[0]) / 2,(topRight[1] + bottomLeft[1]) / 2)):
-            return (int((topRight[0] + bottomLeft[0]) / 2),int((topRight[1] + bottomLeft[1]) / 2))
+        #if self.border.inBorder(((topRight[0] + bottomLeft[0]) / 2,(topRight[1] + bottomLeft[1]) / 2)):
+        return (int((topRight[0] + bottomLeft[0]) / 2),int((topRight[1] + bottomLeft[1]) / 2))
         return None
         #use same method as border template.  if contours are outside current border, ignore
 
