@@ -1,4 +1,5 @@
 import socket
+import time
 import cv2
 import numpy as np
 import math
@@ -11,7 +12,7 @@ class Whiteboard:
     def __init__(self):
 
         self.border = None
-        self.sock = None
+        self.sock = socket.socket()
         self.debug = False
         self.prod = False
         self.penDown = False
@@ -19,11 +20,11 @@ class Whiteboard:
         
 
     def connect(self, host, port):
-        self.sock = socket.socket()
+        print('connect',host,port)
         self.sock.connect((host, port))
 
     def send(self,mesg):
-        self.sock.send(str.encode(mesg))
+        self.sock.send(str.encode(mesg +"\n"))
         print(mesg)
         return
 
@@ -34,12 +35,11 @@ class Whiteboard:
         if self.border is None:
             self.border = Border()
             if self.prod:
-                self.send(encode('calibrating')
-        if not self.border.borderFound():
+                self.send('calibrating')
+        if not self.border.borderFound:
             #CHANGE IMG BEFORE FINDBORDER
             img1 = cvHelper.colorSelect2(img.copy())
             img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-            cv2.imshow('img1', img1)
             self.border.findBorder(img1)
 
             if self.debug:
@@ -47,7 +47,8 @@ class Whiteboard:
             return
 
         if not self.readyMessageSent and self.prod:
-            self.send(encode('ready')
+            self.readyMessageSent = True
+            self.send('ready')
             
         if self.debug:
         #SHOW BORDER
@@ -61,15 +62,16 @@ class Whiteboard:
         #img2 = cv2.Canny(img2, 50, 100)
         LED = self.detectLED(img1)
         if LED is not None:
+            LEDx, LEDy = self.border.getPositionOfPoint(LED)
             if self.debug:
                 img2 = cv2.circle(img2, LED, 5, (0,255,0), -1)
-                print(self.border.getPositionOfPoint(LED))
+                print((LEDx, LEDy))
             if self.prod:
                 if self.penDown:
-                    self.send(str(LED[0]) + ',' + str(LED[1])
+                    self.send(str(LEDx) + ',' + str(LEDy))
                 else:
                     self.penDown = True
-                    self.send("down" + str(LED[0]) + ',' + str(LED[1]))
+                    self.send("down," + str(LED[0]) + ',' + str(LED[1]))
         else:
             if self.debug:
                 print('No LED')
@@ -103,27 +105,32 @@ class Whiteboard:
         rect = cv2.minAreaRect(contours[0])
         box = cv2.boxPoints(rect)
         box = tuple([tuple(x) for x in box])
-        print('og box: ', box)
+        if self.debug:
+            print('og box: ', box)
         topRight = sorted(sorted(box)[2:], key = lambda x : x[1])[0]
         bottomLeft  = sorted(sorted(box)[:2], key = lambda x : x [1])[1]
-        print('new box', box)
+        if self.debug:
+            print('new box', box)
         x,y = (int((topRight[0] + bottomLeft[0]) / 2),int((topRight[1] + bottomLeft[1]) / 2))
         if self.border.inBorder((x,y)):
             return (int((topRight[0] + bottomLeft[0]) / 2),int((topRight[1] + bottomLeft[1]) / 2))
 
 def main():
     w = Whiteboard()
-    host = "jon-laptop-win"
-    port = '1234'
+    host = socket.gethostname()
+    port = 15273
     w.debug = True
+    w.prod = True
     if w.prod:
         connected = False
         while not connected:
             try:
-                w.connect()
+                w.connect(host, port)
                 connected = True
 
             except Exception as e:
+                print('not connected')
+                time.sleep(1)
                 pass
     w.runVideo('tests/piTests/vid/demotest-20s--4-full.mp4')
 

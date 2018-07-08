@@ -9,11 +9,12 @@ import collections
 class Border:
 
     def __init__(self):
-        self.debug = True
+        self.debug = False
         #Final variables
         #minimum amount of times a rectangle is found before it becomes the border
         self.minBorderThreshold = 10
             
+        self.borderFound = False
         #confirmed border corners
         self.borderboundries = []
         #top left corner of the rectangle.  relative coordinates are  (0,0)
@@ -40,28 +41,35 @@ class Border:
             return
         box = cv2.boxPoints(rect)
         box = tuple([tuple([int(x), int(y)]) for x,y in box])
-        print(box, "Box")
+        if self.debug:
+            print(box, "Box")
         width, height = img.shape[:2]
         if (abs(box[0][0] - box[1][0]) > width / 4 or abs(box[0][0] - box[2][0]) > width/4) and (abs(box[0][1] - box[1][1]) > height/4 or abs(box[0][1] - box[2][1]) > height/4):
             self.potentialBorder.update((box,))
+        if self.debug:
             print(self.potentialBorder)
-            border = self.potentialBorder.most_common(1)[0]
-            if  border[1] >= self.minBorderThreshold:
+        if len(self.potentialBorder) == 0:
+            return 
+        border = self.potentialBorder.most_common(1)[0]
+        if  border[1] >= self.minBorderThreshold:
+            self.setBorder(border[0])
 
-                self.setBorder(border[0])
-
-    def borderFound(self):
-        mostCommon = self.potentialBorder.most_common()
-        print(mostCommon)
-        if len(mostCommon) is not 0 and mostCommon[0][1] > self.minBorderThreshold:
-            return True
-        else:
-             return False
+#    def borderFound(self):
+#        mostCommon = self.potentialBorder.most_common()
+#        if self.debug:
+#            print(mostCommon)
+#        if len(mostCommon) is not 0 and mostCommon[0][1] > self.minBorderThreshold:
+#            
+#            return True
+#        else:
+#            return False
     
     def setBorder(self, border):
         self.borderboundries = border
-        print("border")
-        print(border)
+        self.borderFound = True
+        if self.debug:
+            print("border")
+            print(border)
         self.origin = sorted(sorted(border)[:2], key = lambda x : x[1])[0]
         self.topRight = sorted(sorted(border)[2:], key = lambda x : x[1])[0]
         self.bottomLeft  = sorted(sorted(border)[:2], key = lambda x : x [1])[1]
@@ -74,18 +82,21 @@ class Border:
         a = np.array([[1, -1/self.slope], [1, -self.slope]]) 
         b = np.array([point[1] - (1/self.slope) * point[0] ,self.origin[1] - (self.slope * self.origin[0])])
         xPos = np.linalg.solve(a,b)[1]
-        print(np.linalg.solve(a,b))
+        if self.debug:
+            print(np.linalg.solve(a,b))
         a = np.array([[1, -self.slope], [1, -1/self.slope]]) 
         b = np.array([point[1]   - (self.slope) * point[0] ,self.origin[1] - ((1/self.slope) * self.origin[0])])
         yPos = np.linalg.solve(a,b)[0]
-        print(np.linalg.solve(a,b))
-        print("origin", self.origin)
-        print("width, height", self.width, self.height)
-        print('xpos,ypos', xPos - self.origin[0],yPos - self.origin[1])
+        if self.debug:
+            print(np.linalg.solve(a,b))
+            print("origin", self.origin)
+            print("width, height", self.width, self.height)
+            print('xpos,ypos', xPos - self.origin[0],yPos - self.origin[1])
         return [( xPos - self.origin[0]) * 100 / self.width , (yPos - self.origin[1]) * 100/ self.height ]
 
     def inBorder(self, point):
         p = Point(point[0], point[1])
+        print(self.borderboundries)
         polygon = Polygon((self.borderboundries[0],self.borderboundries[1],self.borderboundries[2],self.borderboundries[3]))
         return polygon.contains(p)
 #        borderBuffer = 5
