@@ -117,9 +117,10 @@ class Whiteboard:
 
 def main():
     w = Whiteboard()
-    host = socket.gethostname()
+    #host = 'unit91'
+    host = 'jon-laptop'
     port = 15273
-    w.debug = True
+    w.debug = False
     w.prod = True
     if w.prod:
         connected = False
@@ -133,5 +134,6 @@ def main():
                 time.sleep(1)
                 pass
     w.runVideo('tests/piTests/vid/demotest-20s--4-full.mp4')
+    #w.runVideo(0)
 
 if __name__ == '__main__':main()
