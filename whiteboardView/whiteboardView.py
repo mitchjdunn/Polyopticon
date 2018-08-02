@@ -64,7 +64,7 @@ class Whiteboard:
         if LED is not None:
             LEDx, LEDy = self.border.getPositionOfPoint(LED)
             if self.debug:
-                img2 = cv2.circle(img2, LED, 5, (0,255,0), -1)
+                img2 = cv2.circle(img2, LED, 5, (0,255,0), 2)
                 print((LEDx, LEDy))
             if self.prod:
                 if self.penDown:
@@ -117,11 +117,12 @@ class Whiteboard:
 
 def main():
     w = Whiteboard()
+    #Get host from network discovery.
     #host = 'unit91'
     host = 'jon-laptop'
     port = 15273
-    w.debug = False
-    w.prod = True
+    w.debug = True
+    w.prod = False
     if w.prod:
         connected = False
         while not connected:

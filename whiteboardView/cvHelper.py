@@ -209,7 +209,18 @@ class cvHelper:
         return img
  
 
+    def readFromNet(url):
+        print('yo')
+        cap = cv2.VideoCapture(url)
+        ret,img = cap.read()
+        print('yp')
+        while(ret): 
+            print('more yos')
+            cv2.waitKey(1)
+            cv2.imshow('img',img)
+            ret,img = cap.read()
 #cvHelper.detectLED('tests/piTests/vid/demotest-20s--41-full.mp4', cv2.imread('LEDTemplate.png'))
+#cvHelper.readFromNet('rtp://@localhost:2222')
 #cvHelper.trackLED()
 #cvHelper.showEditedVideo('tests/piTests/vid/demotest-20s--41-full.mp4', cvHelper.colorSelect)
 #print("hello")
