@@ -1,4 +1,5 @@
 whiteboardView/tests/*
+whiteboardView/cvHelper.py
 *.png
 *.jpg
 *.mp4
