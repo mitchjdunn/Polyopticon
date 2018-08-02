@@ -4,8 +4,9 @@ import socket
 from tkinter.colorchooser import askcolor
 
 class DrawSocket(object): 
-    def __init__(self):
+    def __init__(self, paint):
         # Setup server socket
+        self.paint = paint
         self.port = 15273
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -23,7 +24,7 @@ class DrawSocket(object):
             threading.Thread(target = self.listenToClient,args = (client,address)).start()
 
     # Recv data from client and translate that to lines in the Tk app
-    def listenToClient(client, address):
+    def listenToClient(self, client, address):
         size = 1024
         while True:
             try:
@@ -67,9 +68,12 @@ class Paint(object):
         self.sizeButton.configure(width = 10, bd = 0, height = 6)
         self.canvas.create_window(10, 250, anchor=NW, window=self.sizeButton)
 
+        self.history = ""
+
+    def startLoop(self): 
         self.setup()
         self.root.mainloop()
-
+        
     def changeSize(self):
         self.currentSize = (self.currentSize + 1) % len(self.sizes)
         self.sizeButton.configure(text="Size (%d)"%self.sizes[self.currentSize])
@@ -112,7 +116,12 @@ class Paint(object):
 
     def reset(self, event):
         self.oldX, self.oldY = None, None
+
 if __name__ == '__main__':
-    DrawSocket()
-    Paint()
+    print("Setting up tk")
+    p = Paint()
+    print("setting up socket")
+    DrawSocket(p)
+    print("starting tk")
+    p.startLoop()
 
