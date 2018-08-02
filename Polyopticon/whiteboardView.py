@@ -80,7 +80,7 @@ class Whiteboard:
                     if self.lastPen is not None:
                         if abs(self.lastPen[0] - LEDx) > .1 or abs(self.lastPen[1] - LEDy) > .1:
                             self.send('up')
-                            self.send('down' + str(LEDx) + ',' + str(LEDy)
+                            self.send('down' + str(LEDx) + ',' + str(LEDy))
                     self.send(str(LEDx) + ',' + str(LEDy))
                 else:
                     self.penDown = True
@@ -152,4 +152,4 @@ def main():
     #w.runVideo("udp://" + host + ":" + port)
 
 if __name__ == '__main__':
-    whiteboardView.main()
+    main()

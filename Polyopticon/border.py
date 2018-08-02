@@ -2,7 +2,6 @@ import socket
 import cv2
 import numpy as np
 import math
-from cvHelper import cvHelper 
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 import collections
