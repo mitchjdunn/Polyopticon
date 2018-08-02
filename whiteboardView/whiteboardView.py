@@ -3,7 +3,6 @@ import time
 import cv2
 import numpy as np
 import math
-from cvHelper import cvHelper 
 from border import Border
 
 class Whiteboard:
@@ -38,7 +37,7 @@ class Whiteboard:
                 self.send('calibrating')
         if not self.border.borderFound:
             #CHANGE IMG BEFORE FINDBORDER
-            img1 = cvHelper.colorSelect2(img.copy())
+            img1 = Whiteboard.colorSelect(img.copy())
             img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
             self.border.findBorder(img1)
 
@@ -57,7 +56,7 @@ class Whiteboard:
             img2 = cv2.drawContours(img2, [box], 0,(0,0,255), 2)
         
         #CHECKING FOR LED
-        img1 = cvHelper.colorSelect2(img.copy())
+        img1 = Whiteboard.colorSelect(img.copy())
         img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         #img2 = cv2.Canny(img2, 50, 100)
         LED = self.detectLED(img1)
@@ -114,13 +113,20 @@ class Whiteboard:
         x,y = (int((topRight[0] + bottomLeft[0]) / 2),int((topRight[1] + bottomLeft[1]) / 2))
         if self.border.inBorder((x,y)):
             return (int((topRight[0] + bottomLeft[0]) / 2),int((topRight[1] + bottomLeft[1]) / 2))
+    #usese cv2 colorselect to display only the brightest whites in the imaage
+    def colorSelect(img): 
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) 
+        lower_white = np.array([0,0,200]) 
+        upper_white = np.array([240,80,255]) 
+        mask = cv2.inRange(hsv, lower_white, upper_white) 
+        return cv2.bitwise_and(img,img, mask= mask) 
 
 def main():
     w = Whiteboard()
     host = socket.gethostname()
     port = 15273
     w.debug = True
-    w.prod = True
+    w.prod = False
     if w.prod:
         connected = False
         while not connected:
