@@ -1,1 +1,0 @@
-from whiteboard import Paint
