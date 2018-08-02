@@ -5,6 +5,15 @@ import numpy as np
 import math
 from border import Border
 
+class cvHelper:
+
+    def colorSelect(img):
+         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+         lower_white = np.array([0,0,150])
+         upper_white = np.array([20,20,255])
+         mask = cv2.inRange(hsv, lower_white, upper_white)
+         return cv2.bitwise_and(img,img, mask= mask)
+
 class Whiteboard:
 
 
@@ -15,6 +24,7 @@ class Whiteboard:
         self.debug = False
         self.prod = False
         self.penDown = False
+        self.lastPen = None
         self.readyMessageSent = False
         
 
@@ -58,15 +68,19 @@ class Whiteboard:
         #CHECKING FOR LED
         img1 = Whiteboard.colorSelect(img.copy())
         img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-        #img2 = cv2.Canny(img2, 50, 100)
         LED = self.detectLED(img1)
         if LED is not None:
             LEDx, LEDy = self.border.getPositionOfPoint(LED)
             if self.debug:
-                img2 = cv2.circle(img2, LED, 5, (0,255,0), -1)
+                img2 = cv2.circle(img2, LED, 5, (0,255,0), 2)
                 print((LEDx, LEDy))
             if self.prod:
                 if self.penDown:
+                    #checking distance between pen strokes -- don't want misfires to draw lines
+                    if self.lastPen is not None:
+                        if abs(self.lastPen[0] - LEDx) > .1 or abs(self.lastPen[1] - LEDy) > .1:
+                            self.send('up')
+                            self.send('down' + str(LEDx) + ',' + str(LEDy)
                     self.send(str(LEDx) + ',' + str(LEDy))
                 else:
                     self.penDown = True
@@ -110,20 +124,16 @@ class Whiteboard:
         bottomLeft  = sorted(sorted(box)[:2], key = lambda x : x [1])[1]
         if self.debug:
             print('new box', box)
+        #find cener of box
         x,y = (int((topRight[0] + bottomLeft[0]) / 2),int((topRight[1] + bottomLeft[1]) / 2))
         if self.border.inBorder((x,y)):
             return (int((topRight[0] + bottomLeft[0]) / 2),int((topRight[1] + bottomLeft[1]) / 2))
-    #usese cv2 colorselect to display only the brightest whites in the imaage
-    def colorSelect(img): 
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) 
-        lower_white = np.array([0,0,200]) 
-        upper_white = np.array([240,80,255]) 
-        mask = cv2.inRange(hsv, lower_white, upper_white) 
-        return cv2.bitwise_and(img,img, mask= mask) 
+        return None
 
 def main():
     w = Whiteboard()
-    host = socket.gethostname()
+    #Get host from network discovery.
+    host = 'jon-laptop'
     port = 15273
     w.debug = True
     w.prod = False
@@ -139,5 +149,18 @@ def main():
                 time.sleep(1)
                 pass
     w.runVideo('tests/piTests/vid/demotest-20s--4-full.mp4')
+    #w.runVideo("udp://" + host + ":" + port)
 
+def colorSelect(img):
+ 72         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+ 73         lower_white = np.array([0,0,150])
+ 74         upper_white = np.array([20,20,255])
+ 75         mask = cv2.inRange(hsv, lower_white, upper_white)
+ 76         return cv2.bitwise_and(img,img, mask= mask)
+def colorSelect(img):
+ 72         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+ 73         lower_white = np.array([0,0,150])
+ 74         upper_white = np.array([20,20,255])
+ 75         mask = cv2.inRange(hsv, lower_white, upper_white)
+ 76         return cv2.bitwise_and(img,img, mask= mask)
 if __name__ == '__main__':main()
