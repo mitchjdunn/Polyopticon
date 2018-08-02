@@ -3,7 +3,7 @@ import threading
 import socket 
 from tkinter.colorchooser import askcolor
 
-class DrawSocket: 
+class DrawSocket(object): 
     def __init__(self):
         # Setup server socket
         self.port = 15273
