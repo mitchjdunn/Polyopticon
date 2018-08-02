@@ -7,10 +7,10 @@ from border import Border
 
 class cvHelper:
 
-    def colorSelect(img):
+    def colorSelect2(img):
          hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-         lower_white = np.array([0,0,150])
-         upper_white = np.array([20,20,255])
+         lower_white = np.array([0,0,200])
+         upper_white = np.array([240,80,255])
          mask = cv2.inRange(hsv, lower_white, upper_white)
          return cv2.bitwise_and(img,img, mask= mask)
 
