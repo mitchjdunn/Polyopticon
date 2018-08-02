@@ -3,3 +3,4 @@ camView/cvHelper.py
 *.png
 *.jpg
 *.mp4
+*.pyc
