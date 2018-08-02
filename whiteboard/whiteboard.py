@@ -3,7 +3,7 @@ import threading
 import socket 
 from tkinter.colorchooser import askcolor
 
-class BroadcastListener: 
+class DrawSocket: 
     def __init__(self):
         # Setup server socket
         self.port = 15273
@@ -113,6 +113,6 @@ class Paint(object):
     def reset(self, event):
         self.oldX, self.oldY = None, None
 if __name__ == '__main__':
-    BroadcastListener()
+    DrawSocket()
     Paint()
 
