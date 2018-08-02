@@ -151,16 +151,5 @@ def main():
     w.runVideo('tests/piTests/vid/demotest-20s--4-full.mp4')
     #w.runVideo("udp://" + host + ":" + port)
 
-def colorSelect(img):
- 72         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
- 73         lower_white = np.array([0,0,150])
- 74         upper_white = np.array([20,20,255])
- 75         mask = cv2.inRange(hsv, lower_white, upper_white)
- 76         return cv2.bitwise_and(img,img, mask= mask)
-def colorSelect(img):
- 72         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
- 73         lower_white = np.array([0,0,150])
- 74         upper_white = np.array([20,20,255])
- 75         mask = cv2.inRange(hsv, lower_white, upper_white)
- 76         return cv2.bitwise_and(img,img, mask= mask)
-if __name__ == '__main__':main()
+if __name__ == '__main__':
+    whiteboardView.main()
