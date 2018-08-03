@@ -44,11 +44,13 @@ class Whiteboard:
         if self.border is None:
             self.border = Border()
             if self.prod:
+                pass
                 #TODO handle calibration
                 #self.send('calibrating')
         if not self.border.borderFound:
             #CHANGE IMG BEFORE FINDBORDER
-            img1 = Whiteboard.colorSelect(img.copy())
+            #img1 = Whiteboard.colorSelect(img.copy())
+            img1 = cvHelper.colorSelect2(img.copy())
             img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
             self.border.findBorder(img1)
 
@@ -68,7 +70,8 @@ class Whiteboard:
             img2 = cv2.drawContours(img2, [box], 0,(0,0,255), 2)
         
         #CHECKING FOR LED
-        img1 = Whiteboard.colorSelect(img.copy())
+        #img1 = Whiteboard.colorSelect(img.copy())
+        img1 = cvHelper.colorSelect2(img.copy())
         img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         LED = self.detectLED(img1)
         if LED is not None:
@@ -83,7 +86,7 @@ class Whiteboard:
                         if abs(self.lastPen[0] - LEDx) > .1 or abs(self.lastPen[1] - LEDy) > .1:
                             self.up()
                             self.down((LEDx, LEDy))
-                    self.newLEDPos(str(LEDx) + ',' + str(LEDy))
+                    self.newLEDPos((LEDx,LEDy))
                 else:
                     self.down((LEDx, LEDy))
         else:
@@ -135,22 +138,9 @@ def main():
     p.setup()
     w = Whiteboard(p)
     #Get host from network discovery.
-    host = 'jon-laptop'
-    port = 15273
     w.debug = True
     w.prod = False
-    if w.prod:
-        connected = False
-        while not connected:
-            try:
-                w.connect(host, port)
-                connected = True
-
-            except Exception as e:
-                print('not connected')
-                time.sleep(1)
-                pass
-    w.runVideo('tests/piTests/vid/demotest-20s--4-full.mp4')
+    w.runVideo('demotest.mp4')
     #w.runVideo("udp://" + host + ":" + port)
 
 if __name__ == '__main__':
