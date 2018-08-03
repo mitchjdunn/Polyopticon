@@ -227,7 +227,3 @@ if __name__ == '__main__':
     print("Setting up tk")
     p = Paint(master=True)
     p.startLoop()
-    
-    print("Sleeping") 
-    time.sleep(5)
-    p2 = Paint(master=False)
