@@ -64,6 +64,7 @@ class Paint(object):
 
     def __init__(self, master=False):
         self.slaveAttached = False
+        self.slaveIP = None
         self.master = master
         # Setup the Tk interface
         self.color = 0
@@ -260,9 +261,11 @@ class Paint(object):
     # connecting a new slave will kill the other slave :O
     def addSlave(self, ipaddr):
         print("adding slave {}".format(ipaddr)) 
+        self.slaveIP = ipaddr
         self.slavesocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.slavesocket.connect((ipaddr, 15273))
         
+        self.slaveAttached = True
         # make sure slave gets the write pen type off the bat
         self.sendToSlave("color,{}".format(self.color))
         self.sendToSlave("size,{}".format(self.lineWidth))

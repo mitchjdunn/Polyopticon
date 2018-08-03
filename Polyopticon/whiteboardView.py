@@ -1,4 +1,4 @@
-import time
+from time import sleep
 import cv2
 import numpy as np
 import math
@@ -107,6 +107,7 @@ class Whiteboard:
         ret, img = cap.read()
         if not ret and self.debug:
             print("no video")
+            sleep(1)
         while ret:
             self.nextFrame(img)
             cv2.waitKey()
@@ -134,14 +135,21 @@ class Whiteboard:
         return None
 
 def main():
-    p = Paint()
+    p = Paint(master = True)
     p.setup()
     w = Whiteboard(p)
     #Get host from network discovery.
     w.debug = True
     w.prod = True
-    w.runVideo('demotest.mp4')
-    #w.runVideo("udp://" + host + ":" + port)
+    #w.runVideo('demotest.mp4')
+    #while not p.slaveAttached:
+    #    print("slave not found")
+    #    sleep(1)
+    #host = p.slaveIP
+    host = "192.168.1.6"
+    print(host)
+    port = '4545'
+    w.runVideo("udp://" + host + ":" + port)
 
 if __name__ == '__main__':
     main()
