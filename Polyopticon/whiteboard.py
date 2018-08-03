@@ -31,18 +31,31 @@ class DrawSocket(object):
     def listenToClient(self, client, address):
         self.connected = True
         print("New client connected")
-        size = 1024
+        size = 2048
+        data = b''
         while True:
             try:
-                data = client.recv(size)
-                if data:
-                    for line in data.decode("utf-8").split(sep='\n'):
-                        self.paint.handle(line)
+                data = data + client.recv(size)
+                if data is b'' or data.decode("utf-8").rstrip() is '':
+                    print("no data, client dead")
+                    return 
+
+                string = data.decode("utf-8")
+                lines = string.split(sep='\n')
+
+                if not string.endswith('\n'):
+                    print("adding line to next buffer")
+                    data = str.encode(lines[-1])
+                    lines = lines[:-1]
                 else:
-                    raise RuntimeError('Client Disconnect')
+                    data = b''
+
+                for line in lines:
+                    self.paint.handle(line)
+
             except Exception as e:
                 print('client disconnected due to error') 
-                # print(e)
+                print(e)
                 traceback.print_exc()
                 client.close()
                 self.connected = False
@@ -73,6 +86,7 @@ class Paint(object):
         self.slaveAttached = False
         self.slaveIP = None
         self.master = master
+        self.sendQueue = []
         # Setup the Tk interface
         self.color = 0
         self.currentColor = 0
@@ -108,7 +122,6 @@ class Paint(object):
             BroadcastListener(self) 
         else:
             d = DrawSocket(self)
-            # TODO Send the broadcast packet
             threading.Thread(target = self.waitForMaster, args=[d] ).start()
 
 
@@ -116,12 +129,32 @@ class Paint(object):
         broadcast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
         broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
         broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        while not drawsocket.socketConnected():
-            print("pinging for master")
-            broadcast.sendto(str.encode('whiteboard'), ('255.255.255.255', 15272))
-            sleep(3)
-        print("stopping broadcasts")
+        while True:
+            print("starting broadcasts")
+            while not drawsocket.socketConnected():
+                print("pinging for master")
+                broadcast.sendto(str.encode('whiteboard'), ('255.255.255.255', 15272))
+                sleep(3)
+            print("broadcasts stopped")
+            while drawsocket.socketConnected():
+                sleep(1)
         
+    def slaveSendThread(self, socket):
+        currentPos = 0
+        while True:
+            sleep(0.1)
+            while currentPos < len(self.sendQueue):
+                try: 
+                    line = self.sendQueue[currentPos]
+                    print("SEND {}".format(line))
+                    socket.send(line)
+                    currentPos = currentPos + 1
+                except Exception as e:
+                    print("slave is dead")
+                    print(e)
+                    return
+                
+            
     def startLoop(self): 
         self.setup()
         self.root.mainloop()
@@ -153,8 +186,6 @@ class Paint(object):
 
     def chooseColor(self):
         self.eraserOn = False
-        # TODO make like 5 colors to cycle through
-        # TODO Set color on slaves
         self.color = (self.color + 1) % len(self.colors)
         self.sendToSlave('color,{}'.format(self.color))
 
@@ -171,7 +202,7 @@ class Paint(object):
                                width=self.lineWidth, fill=paintColor,
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
             if self.master:
-                self.root.update()
+                # self.root.update()
                 calcx = float(event.x) / self.canvas.winfo_width() * 100
                 calcy = float(event.y) / self.canvas.winfo_height() * 100
                 try:
@@ -179,7 +210,7 @@ class Paint(object):
                 except Exception as e:
                     pass
         elif self.master:
-            self.root.update()
+            # self.root.update()
             calcx = float(event.x) / self.canvas.winfo_width() * 100
             calcy = float(event.y) / self.canvas.winfo_height() * 100
             try:
@@ -205,7 +236,7 @@ class Paint(object):
         self.root.update()
         w = float(self.canvas.winfo_width())
         h = float(self.canvas.winfo_height())
-        print("canvas WxH = {} {}".format(w, h))
+        # print("canvas WxH = {} {}".format(w, h))
         
         # normalized from x 
         nfX = (float(fromX) / 100.0) * w
@@ -217,7 +248,7 @@ class Paint(object):
         # normalized from y 
         ntY = (float(toY) / 100.0) * h 
             
-        print("drawing line line from {},{} to {},{}".format(nfX, nfY, ntX, ntY))
+        # print("drawing line line from {},{} to {},{}".format(nfX, nfY, ntX, ntY))
         self.canvas.create_line(nfX, nfY, ntX, ntY,
                                width=self.lineWidth, fill=self.colors[self.color],
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
@@ -226,6 +257,9 @@ class Paint(object):
     def checkForButtonPress(self, x, y):
         return False
 
+    def clearDrawing(self):
+        self.root.update()
+        self.canvas.create_rectangle(0, 0, self.canvas.winfo_width, self.canvas.winfo_height, fill='black')
     def handle(self, line):
         if line.rstrip() is '':
             return
@@ -253,9 +287,13 @@ class Paint(object):
             print('got size')
             self.setSize(line.split(sep=',')[1])
         elif self.prev is not None:
+            print(line)
             coords = line.split(sep=',')
-            self.normalizedDrawLine(self.prev[0], self.prev[1], coords[0], coords[1])
-            self.prev = (coords[0], coords[1])
+            try:
+                self.normalizedDrawLine(self.prev[0], self.prev[1], coords[0], coords[1])
+                self.prev = (coords[0], coords[1])
+            except IndexError as e:
+                print('bad coords, ignoring')
         else:
             print('+ unknown message')
             print(line)
@@ -263,28 +301,25 @@ class Paint(object):
             
 
     def sendToSlave(self, line): 
-        if self.slavesocket: 
-            line = line + '\n'
-            print("SEND {}".format(line))
-            try: 
-                self.slavesocket.send(str.encode(line))
-            except Exception as e:
-                print("slave is dead")
-                self.slavesocket = None
+        line = line.rstrip() + '\n'
+        # print("SEND {}".format(line))
+        self.sendQueue.append(str.encode(line))
 
     # only single slave supported rn
     # connecting a new slave will kill the other slave :O
     def addSlave(self, ipaddr):
         print("adding slave {}".format(ipaddr)) 
         self.slaveIP = ipaddr
-        self.slavesocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.slavesocket.connect((ipaddr, 15273))
+        slavesocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        slavesocket.connect((ipaddr, 15273))
         
-        self.slaveAttached = True
+        slaveAttached = True
         # make sure slave gets the write pen type off the bat
-        self.sendToSlave("color,{}".format(self.color))
-        self.sendToSlave("size,{}".format(self.lineWidth))
-        
+        threading.Thread(target = self.slaveSendThread, args = [slavesocket]).start()
+#        sleep(0.001)
+#        self.sendToSlave("color,{}".format(self.color))
+#        self.sendToSlave("size,{}".format(self.lineWidth))
+
 if __name__ == '__main__':
     print("Setting up tk")
     p = Paint(master=True)
