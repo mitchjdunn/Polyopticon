@@ -114,17 +114,19 @@ class Paint(object):
         self.oldY = None
         self.lineWidth = self.sizes[self.currentSize]
         self.eraserOn = False
-        self.activateButton = self.penButton
+        self.activateButton(self.penButton)
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
 
     def usePen(self):
         self.eraserOn = False
         self.color = (self.color + 1) % len(colors)
+        self.activateButton(self.penButton)
 
     def useEraser(self):
         self.eraserOn = True
         sendToSlave('color,black')
+        self.activateButton(self.eraserButton)
 
     def chooseColor(self):
         self.eraserOn = False
