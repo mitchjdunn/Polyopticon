@@ -26,6 +26,10 @@ class Whiteboard:
         self.lastPen = None
         self.readyMessageSent = False
 
+
+        #Socket for video stream
+        self.videosocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
     def up(self):
         self.penDown = False
         self.p.handle('up') 
@@ -100,6 +104,9 @@ class Whiteboard:
             cv2.imshow('img', img)
             cv2.imshow('img2', img2)
     def runVideo(self, videoPath):
+        self.
+
+        
         if self.debug:
             print("runVideo")
         cap = cv2.VideoCapture(videoPath)
@@ -107,10 +114,10 @@ class Whiteboard:
         ret, img = cap.read()
         if not ret and self.debug:
             print("no video")
-            sleep(1)
         while ret:
             self.nextFrame(img)
-            cv2.waitKey()
+            print("hiya")
+            cv2.waitKey(1)
             ret, img = cap.read()
 
     def detectLED(self, img):
@@ -137,19 +144,18 @@ class Whiteboard:
 def main():
     p = Paint(master = True)
     p.setup()
-    w = Whiteboard(p)
     #Get host from network discovery.
-    w.debug = True
-    w.prod = True
-    #w.runVideo('demotest.mp4')
-    #while not p.slaveAttached:
-    #    print("slave not found")
-    #    sleep(1)
-    #host = p.slaveIP
-    host = "192.168.1.6"
+    while not p.slaveAttached:
+        print("slave not found")
+        sleep(1)
+    host = p.slaveIP
+    #host = "192.168.1.6"
     print(host)
-    port = '4545'
-    w.runVideo("udp://" + host + ":" + port)
+    #port = '4545'
+    w = Whiteboard(p)
+    w.debug = True
+    w.prod = False
+    #w.runVideo("udp://@" + host + ":" + port)
 
 if __name__ == '__main__':
     main()
