@@ -31,18 +31,31 @@ class DrawSocket(object):
     def listenToClient(self, client, address):
         self.connected = True
         print("New client connected")
-        size = 1024
+        size = 2048
+        data = b''
         while True:
             try:
-                data = client.recv(size)
-                if data:
-                    for line in data.decode("utf-8").split(sep='\n'):
-                        self.paint.handle(line)
+                data = data + client.recv(size)
+                if data is b'' or data.decode("utf-8").rstrip() is '':
+                    print("no data, client dead")
+                    return 
+
+                string = data.decode("utf-8")
+                lines = string.split(sep='\n')
+
+                if not string.endswith('\n'):
+                    print("adding line to next buffer")
+                    data = str.encode(lines[-1])
+                    lines = lines[:-1]
                 else:
-                    raise RuntimeError('Client Disconnect')
+                    data = b''
+
+                for line in lines:
+                    self.paint.handle(line)
+
             except Exception as e:
                 print('client disconnected due to error') 
-                # print(e)
+                print(e)
                 traceback.print_exc()
                 client.close()
                 self.connected = False
@@ -80,7 +93,6 @@ class Paint(object):
         self.root = Tk()
         self.slavesocket = None
         self.colors = ['red', 'blue', 'white', 'green', 'purple', 'orange']
-
 
         self.canvas = Canvas(self.root, bg='black')# , width=600, height=600)
         self.canvas.pack(fill=BOTH, expand=YES, padx = 5, pady = 5)
@@ -128,13 +140,18 @@ class Paint(object):
                 sleep(1)
         
     def slaveSendThread(self, socket):
+        currentPos = 0
         while True:
-            currentPos = 0
+            sleep(0.1)
             while currentPos < len(self.sendQueue):
                 try: 
-                    self.slavesocket.send(str.encode(line))
+                    line = self.sendQueue[currentPos]
+                    print("SEND {}".format(line))
+                    socket.send(line)
+                    currentPos = currentPos + 1
                 except Exception as e:
                     print("slave is dead")
+                    print(e)
                     return
                 
             
@@ -231,7 +248,7 @@ class Paint(object):
         # normalized from y 
         ntY = (float(toY) / 100.0) * h 
             
-        print("drawing line line from {},{} to {},{}".format(nfX, nfY, ntX, ntY))
+        # print("drawing line line from {},{} to {},{}".format(nfX, nfY, ntX, ntY))
         self.canvas.create_line(nfX, nfY, ntX, ntY,
                                width=self.lineWidth, fill=self.colors[self.color],
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
@@ -270,9 +287,13 @@ class Paint(object):
             print('got size')
             self.setSize(line.split(sep=',')[1])
         elif self.prev is not None:
+            print(line)
             coords = line.split(sep=',')
-            self.normalizedDrawLine(self.prev[0], self.prev[1], coords[0], coords[1])
-            self.prev = (coords[0], coords[1])
+            try:
+                self.normalizedDrawLine(self.prev[0], self.prev[1], coords[0], coords[1])
+                self.prev = (coords[0], coords[1])
+            except IndexError as e:
+                print('bad coords, ignoring')
         else:
             print('+ unknown message')
             print(line)
@@ -281,7 +302,7 @@ class Paint(object):
 
     def sendToSlave(self, line): 
         line = line.rstrip() + '\n'
-        print("SEND {}".format(line))
+        # print("SEND {}".format(line))
         self.sendQueue.append(str.encode(line))
 
     # only single slave supported rn
@@ -294,9 +315,10 @@ class Paint(object):
         
         slaveAttached = True
         # make sure slave gets the write pen type off the bat
-        self.sendToSlave("color,{}".format(self.color))
-        self.sendToSlave("size,{}".format(self.lineWidth))
-        threading.Thread(target = self.slaveSendThread, args = [slavesocket])
+        threading.Thread(target = self.slaveSendThread, args = [slavesocket]).start()
+#        sleep(0.001)
+#        self.sendToSlave("color,{}".format(self.color))
+#        self.sendToSlave("size,{}".format(self.lineWidth))
 
 if __name__ == '__main__':
     print("Setting up tk")
