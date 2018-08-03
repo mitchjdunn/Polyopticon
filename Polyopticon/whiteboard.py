@@ -125,7 +125,8 @@ class Paint(object):
         self.activateButton = self.penButton
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
-
+        self.prev = None
+        
     def usePen(self):
         self.eraserOn = False
         self.color = (self.color + 1) % len(self.colors)
@@ -191,6 +192,9 @@ class Paint(object):
         self.canvas.create_line(nfX, nfY, ntX, ntY,
                                width=self.lineWidth, fill=self.color,
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
+
+    def checkForButtonPress(self, x, y):
+        pass 
     def handle(self, line):
         # if i am the master send to the slave also to keep him up to date
         if self.master: 
@@ -198,16 +202,16 @@ class Paint(object):
 
         if 'down' in line: 
             coords = line.split(sep=',')
-            if not self.paint.checkForButtonPress:
+            if not self.checkForButtonPress:
                 self.prev = (coords[1], coords[2])
         elif 'up' in line:
             coords = line.split(sep=',')
             self.prev = None
         elif 'color' in line:
-            self.setColor(line.split(sep=',')[1])
+            self.setColor(int(line.split(sep=',')[1]))
         elif 'size' in line: 
             self.setSize(line.split(sep=',')[1])
-        elif prev is not None:
+        elif self.prev is not None:
             coords = line.split(sep=',')
             self.normalizedDrawLine(self.prev[0], self.prev[1], coords[0], coords[1])
             self.prev = (coords[0], coords[1])
