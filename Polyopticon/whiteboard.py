@@ -47,17 +47,19 @@ class DrawSocket(object):
     
 class BroadcastListener(object): 
     def __init__(self, paint):
+        print("Setting up broadcast listener")
         self.paint = paint
-        client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-        client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        client.bind(("", 15272))
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+        self.client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self.client.bind(("", 15272))
+        threading.Thread(target = self.listen).start()
 
     def listen(self):
         while True:
-            data, addr = client.recvfrom(1024)
+            data, addr = self.client.recvfrom(1024)
             print("received message: %s, from: %s"%(data, addr))
-            if 'whiteboard' in data:
-                self.paint.addSlave(addr)
+            if 'whiteboard' in data.decode("utf-8"):
+                self.paint.addSlave(addr[0])
             
 
 class Paint(object):
@@ -100,6 +102,11 @@ class Paint(object):
             BroadcastListener(self) 
         else:
             DrawSocket(self)
+            # TODO Send the broadcast packet
+            broadcast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+            broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
+            broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            broadcast.sendto(str.encode('whiteboard'), ('255.255.255.255', 15272))
 
     def startLoop(self): 
         self.setup()
@@ -146,6 +153,10 @@ class Paint(object):
             self.canvas.create_line(self.oldX, self.oldY, event.x, event.y,
                                width=self.lineWidth, fill=paintColor,
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
+            if self.master:
+                self.sendToSlave('down,{},{}'.format(event.x, event.y))
+        elif self.master:
+            self.sendToSlave('{},{}'.format(event.x, event.y))
         self.oldX = event.x
         self.oldY = event.y
 
@@ -188,22 +199,18 @@ class Paint(object):
         if 'down' in line: 
             coords = line.split(sep=',')
             if not self.paint.checkForButtonPress:
-                prev = (coords[1], coords[2])
+                self.prev = (coords[1], coords[2])
         elif 'up' in line:
             coords = line.split(sep=',')
-            prev = None
+            self.prev = None
         elif 'color' in line:
             self.setColor(line.split(sep=',')[1])
         elif 'size' in line: 
             self.setSize(line.split(sep=',')[1])
         elif prev is not None:
             coords = line.split(sep=',')
-            a = prev[0]
-            b = prev[1]
-            c = coords[0]
-            d = coords[1]
-            self.normalizedDrawLine(prev[0], prev[1], coords[0], coords[1])
-            prev = (coords[0], coords[1])
+            self.normalizedDrawLine(self.prev[0], self.prev[1], coords[0], coords[1])
+            self.prev = (coords[0], coords[1])
         else:
             print('unknown message')
             print(line)
@@ -211,12 +218,13 @@ class Paint(object):
     def sendToSlave(self, line): 
         if self.slavesocket: 
             line = line + '\n'
-            self.slavesocket.send(str.encode('line'))
+            self.slavesocket.send(str.encode(line))
 
     # only single slave supported rn
     # connecting a new slave will kill the other slave :O
     def addSlave(self, ipaddr):
-        self.slavesocket = socket.socket(socket.AF_NET, socket.SOCK_STREAM)
+        print("adding slave {}".format(ipaddr)) 
+        self.slavesocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.slavesocket.connect((ipaddr, 15273))
         
         # make sure slave gets the write pen type off the bat
