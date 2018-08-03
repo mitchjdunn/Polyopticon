@@ -282,7 +282,7 @@ class Paint(object):
     def sendToSlave(self, line): 
         line = line.rstrip() + '\n'
         print("SEND {}".format(line))
-        self.sendQueue.append(str.encode(line)
+        self.sendQueue.append(str.encode(line))
 
     # only single slave supported rn
     # connecting a new slave will kill the other slave :O
