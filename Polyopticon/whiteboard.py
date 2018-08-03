@@ -61,7 +61,6 @@ class BroadcastListener(object):
             
 
 class Paint(object):
-    colors = ['red', 'blue', 'white', 'green', 'purple', 'orange']
 
     def __init__(self, master=False):
         self.slaveAttached = False
@@ -70,6 +69,8 @@ class Paint(object):
         self.color = 0
         self.currentColor = 0
         self.root = Tk()
+        self.slavesocket = None
+        self.colors = ['red', 'blue', 'white', 'green', 'purple', 'orange']
 
         self.canvas = Canvas(self.root, bg='black')# , width=600, height=600)
         self.canvas.pack(fill=BOTH, expand=YES, padx = 5, pady = 5)
@@ -96,7 +97,7 @@ class Paint(object):
 
         print("setting up socket")
         if master: 
-            BroadcastSocket() 
+            BroadcastListener(self) 
         else:
             DrawSocket(self)
 
@@ -114,34 +115,33 @@ class Paint(object):
         self.oldY = None
         self.lineWidth = self.sizes[self.currentSize]
         self.eraserOn = False
-        self.activateButton(self.penButton)
+        self.activateButton = self.penButton
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
 
     def usePen(self):
         self.eraserOn = False
-        self.color = (self.color + 1) % len(colors)
-        self.activateButton(self.penButton)
+        self.color = (self.color + 1) % len(self.colors)
+        self.activateButton = self.penButton
 
     def useEraser(self):
         self.eraserOn = True
-        sendToSlave('color,black')
-        self.activateButton(self.eraserButton)
+        self.sendToSlave('color,black')
+        self.activateButton = self.eraserButton
 
     def chooseColor(self):
         self.eraserOn = False
-        self.color = (self.color + 1) % len(colors)
-        sendToSlave('color,{}'.format(self.color))
+        self.color = (self.color + 1) % len(self.colors)
+        self.sendToSlave('color,{}'.format(self.color))
 
-    def activateButton(self, some_button, eraser_mode=False):
+    def activateButton(self, some_button):
         self.activateButton.config(relief=RAISED)
         some_button.config(relief=SUNKEN)
         self.activateButton = some_button
-        self.eraserOn = eraser_mode
 
     def paint(self, event):
         self.lineWidth = self.sizes[self.currentSize]
-        paintColor = 'black' if self.eraserOn else colors[self.color]
+        paintColor = 'black' if self.eraserOn else self.colors[self.color]
         if self.oldX and self.oldY:
             self.canvas.create_line(self.oldX, self.oldY, event.x, event.y,
                                width=self.lineWidth, fill=paintColor,
@@ -183,7 +183,7 @@ class Paint(object):
     def handle(self, line):
         # if i am the master send to the slave also to keep him up to date
         if self.master: 
-            sendToSlave(line)
+            self.sendToSlave(line)
 
         if 'down' in line: 
             coords = line.split(sep=',')
@@ -209,8 +209,9 @@ class Paint(object):
             print(line)
 
     def sendToSlave(self, line): 
-        line = line + '\n'
-        self.slavesocket.send(str.encode('line'))
+        if self.slavesocket: 
+            line = line + '\n'
+            self.slavesocket.send(str.encode('line'))
 
     # only single slave supported rn
     # connecting a new slave will kill the other slave :O
@@ -219,10 +220,14 @@ class Paint(object):
         self.slavesocket.connect((ipaddr, 15273))
         
         # make sure slave gets the write pen type off the bat
-        sendToSlave("color,{}".format(self.color))
-        sendToSlave("size,{}".format(self.lineWidth))
+        self.sendToSlave("color,{}".format(self.color))
+        self.sendToSlave("size,{}".format(self.lineWidth))
         
 if __name__ == '__main__':
     print("Setting up tk")
-    p = Paint(master=False)
+    p = Paint(master=True)
     p.startLoop()
+    
+    print("Sleeping") 
+    time.sleep(5)
+    p2 = Paint(master=False)
