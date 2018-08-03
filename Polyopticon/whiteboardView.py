@@ -1,4 +1,3 @@
-import socket
 import time
 import cv2
 import numpy as np
@@ -18,37 +17,24 @@ class cvHelper:
 class Whiteboard:
 
 
-    def __init__(self):
-
+    def __init__(self, whiteboard):
+        self.p = whiteboard
         self.border = None
-        self.sock = socket.socket()
         self.debug = False
         self.prod = False
         self.penDown = False
         self.lastPen = None
         self.readyMessageSent = False
-        
-
-    def connect(self, host, port):
-        print('connect',host,port)
-        self.sock.connect((host, port))
-
-    def send(self,mesg):
-        self.sock.send(str.encode(mesg +"\n"))
-        print(mesg)
-        return
 
     def up(self):
         self.penDown = False
-        self.send("up")
+        self.p.handle('up') 
     def down(self, pos):
         self.penDown = True
-        self.send("down," + str(pos[1]) + ',' + str(pos[1]))
-        #draw
-
+        self.p.handle("down," + str(pos[1]) + ',' + str(pos[1]))
     def newLEDPos(self, pos):
         self.lastPen = pos
-        self.send(str(pos[0]) +','+str(pos[1]))
+        self.p.handle(str(pos[0]) +','+str(pos[1]))
         #draw
 
     def nextFrame(self, img):
@@ -58,7 +44,8 @@ class Whiteboard:
         if self.border is None:
             self.border = Border()
             if self.prod:
-                self.send('calibrating')
+                #TODO handle calibration
+                #self.send('calibrating')
         if not self.border.borderFound:
             #CHANGE IMG BEFORE FINDBORDER
             img1 = Whiteboard.colorSelect(img.copy())
@@ -71,7 +58,8 @@ class Whiteboard:
 
         if not self.readyMessageSent and self.prod:
             self.readyMessageSent = True
-            self.send('ready')
+            #TODO handle ready message
+            #self.send('ready')
             
         if self.debug:
         #SHOW BORDER
@@ -103,8 +91,7 @@ class Whiteboard:
                 print('No LED')
             if self.prod:
                 if self.penDown:
-                    self.penDown = False
-                    self.send('up')
+                    self.up()
 
         if self.debug:
             cv2.imshow('img', img)
@@ -144,9 +131,9 @@ class Whiteboard:
         return None
 
 def main():
-    w = Whiteboard()
     p = Paint()
     p.setup()
+    w = Whiteboard(p)
     #Get host from network discovery.
     host = 'jon-laptop'
     port = 15273
