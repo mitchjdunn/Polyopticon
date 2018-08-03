@@ -21,7 +21,7 @@ class DrawSocket(object):
         self.serverSocket.listen(5)
         while True:
             client, address = self.serverSocket.accept()
-            client.settimeout(60)
+            # client.settimeout(60)
             threading.Thread(target = self.listenToClient,args = (client,address)).start()
 
     # Recv data from client and translate that to lines in the Tk app
@@ -155,14 +155,15 @@ class Paint(object):
                                width=self.lineWidth, fill=paintColor,
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
             if self.master:
-                self.sendToSlave('down,{},{}'.format(event.x, event.y))
+                self.sendToSlave('{},{}'.format(event.x, event.y))
         elif self.master:
-            self.sendToSlave('{},{}'.format(event.x, event.y))
+            self.sendToSlave('down,{},{}'.format(event.x, event.y))
         self.oldX = event.x
         self.oldY = event.y
 
     def reset(self, event):
         self.oldX, self.oldY = None, None
+        self.sendToSlave('up')
 
     # Setter for pensize
     def setSize(self, size):
@@ -193,8 +194,10 @@ class Paint(object):
                                width=self.lineWidth, fill=self.color,
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
 
+    # TODO
     def checkForButtonPress(self, x, y):
-        pass 
+        return False
+
     def handle(self, line):
         # if i am the master send to the slave also to keep him up to date
         if self.master: 
@@ -216,8 +219,10 @@ class Paint(object):
             self.normalizedDrawLine(self.prev[0], self.prev[1], coords[0], coords[1])
             self.prev = (coords[0], coords[1])
         else:
-            print('unknown message')
+            print('+ unknown message')
             print(line)
+            print('- unknown message')
+            
 
     def sendToSlave(self, line): 
         if self.slavesocket: 
