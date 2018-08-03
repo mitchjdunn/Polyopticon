@@ -185,7 +185,7 @@ class Paint(object):
                                width=self.lineWidth, fill=paintColor,
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
             if self.master:
-                self.root.update()
+                # self.root.update()
                 calcx = float(event.x) / self.canvas.winfo_width() * 100
                 calcy = float(event.y) / self.canvas.winfo_height() * 100
                 try:
@@ -193,7 +193,7 @@ class Paint(object):
                 except Exception as e:
                     pass
         elif self.master:
-            self.root.update()
+            # self.root.update()
             calcx = float(event.x) / self.canvas.winfo_width() * 100
             calcy = float(event.y) / self.canvas.winfo_height() * 100
             try:
@@ -296,7 +296,7 @@ class Paint(object):
         # make sure slave gets the write pen type off the bat
         self.sendToSlave("color,{}".format(self.color))
         self.sendToSlave("size,{}".format(self.lineWidth))
-        threading.Thread(target = slaveSendThread, args = [slavesocket])
+        threading.Thread(target = self.slaveSendThread, args = [slavesocket])
 
 if __name__ == '__main__':
     print("Setting up tk")
