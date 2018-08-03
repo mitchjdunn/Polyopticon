@@ -21,21 +21,19 @@ class DrawSocket(object):
         self.serverSocket.listen(5)
         while True:
             client, address = self.serverSocket.accept()
-            client.settimeout(60)
+            # client.settimeout(60)
             threading.Thread(target = self.listenToClient,args = (client,address)).start()
 
     # Recv data from client and translate that to lines in the Tk app
     def listenToClient(self, client, address):
         print("New client connected")
-        size = 128
-        prev = None
+        size = 1024
         while True:
             try:
                 data = client.recv(size)
                 if data:
                     for line in data.decode("utf-8").split(sep='\n'):
                         self.paint.handle(line)
-                        print(line)
                 else:
                     raise RuntimeError('Client Disconnect')
             except Exception as e:
@@ -125,7 +123,8 @@ class Paint(object):
         self.activateButton = self.penButton
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
-
+        self.prev = None
+        
     def usePen(self):
         self.eraserOn = False
         self.color = (self.color + 1) % len(self.colors)
@@ -156,14 +155,27 @@ class Paint(object):
                                width=self.lineWidth, fill=paintColor,
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
             if self.master:
-                self.sendToSlave('down,{},{}'.format(event.x, event.y))
+                self.root.update()
+                calcx = float(event.x) / self.canvas.winfo_width() * 100
+                calcy = float(event.y) / self.canvas.winfo_height() * 100
+                try:
+                    self.sendToSlave('{},{}'.format(calcx, calcy))
+                except Exception as e:
+                    pass
         elif self.master:
-            self.sendToSlave('{},{}'.format(event.x, event.y))
+            self.root.update()
+            calcx = float(event.x) / self.canvas.winfo_width() * 100
+            calcy = float(event.y) / self.canvas.winfo_height() * 100
+            try:
+                self.sendToSlave('down,{},{}'.format(calcx, calcy))
+            except Exception as e:
+                pass
         self.oldX = event.x
         self.oldY = event.y
 
     def reset(self, event):
         self.oldX, self.oldY = None, None
+        self.sendToSlave('up')
 
     # Setter for pensize
     def setSize(self, size):
@@ -175,8 +187,8 @@ class Paint(object):
 
     def normalizedDrawLine(self, fromX, fromY, toX, toY):
         self.root.update()
-        w = self.canvas.winfo_width()
-        h = self.canvas.winfo_height()
+        w = float(self.canvas.winfo_width())
+        h = float(self.canvas.winfo_height())
         print("canvas WxH = {} {}".format(w, h))
         
         # normalized from x 
@@ -191,36 +203,57 @@ class Paint(object):
             
         print("drawing line line from {},{} to {},{}".format(nfX, nfY, ntX, ntY))
         self.canvas.create_line(nfX, nfY, ntX, ntY,
-                               width=self.lineWidth, fill=self.color,
+                               width=self.lineWidth, fill=self.colors[self.color],
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
+
+    # TODO
+    def checkForButtonPress(self, x, y):
+        return False
+
     def handle(self, line):
+        if line.rstrip() is '':
+            return
+
         # if i am the master send to the slave also to keep him up to date
         if self.master: 
             self.sendToSlave(line)
 
         if 'down' in line: 
+            print('got down')
             coords = line.split(sep=',')
-            if not self.paint.checkForButtonPress:
+            if not self.checkForButtonPress(coords[0], coords[1]):
+                print("setting prev")
                 self.prev = (coords[1], coords[2])
+                print(self.prev)
         elif 'up' in line:
+            print('got up')
             coords = line.split(sep=',')
             self.prev = None
         elif 'color' in line:
-            self.setColor(line.split(sep=',')[1])
+            print('got color')
+            self.setColor(int(line.split(sep=',')[1]))
         elif 'size' in line: 
+            print('got size')
             self.setSize(line.split(sep=',')[1])
-        elif prev is not None:
+        elif self.prev is not None:
             coords = line.split(sep=',')
             self.normalizedDrawLine(self.prev[0], self.prev[1], coords[0], coords[1])
             self.prev = (coords[0], coords[1])
         else:
-            print('unknown message')
+            print('+ unknown message')
             print(line)
+            print('- unknown message')
+            
 
     def sendToSlave(self, line): 
         if self.slavesocket: 
             line = line + '\n'
-            self.slavesocket.send(str.encode(line))
+            print("SEND {}".format(line))
+            try: 
+                self.slavesocket.send(str.encode(line))
+            except Exception as e:
+                print("slave is dead")
+                self.slavesocket = None
 
     # only single slave supported rn
     # connecting a new slave will kill the other slave :O
