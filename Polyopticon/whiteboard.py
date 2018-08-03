@@ -154,14 +154,20 @@ class Paint(object):
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
             if self.master:
                 self.root.update()
-                calcx = float(event.x) / self.canvas.winfo_width()
-                calcy = float(event.y) / self.canvas.winfo_height()
-                self.sendToSlave('{},{}'.format(calcx, calcy))
+                calcx = float(event.x) / self.canvas.winfo_width() * 100
+                calcy = float(event.y) / self.canvas.winfo_height() * 100
+                try:
+                    self.sendToSlave('{},{}'.format(calcx, calcy))
+                except Exception as e:
+                    pass
         elif self.master:
             self.root.update()
-            calcx = float(event.x) / self.canvas.winfo_width()
-            calcy = float(event.y) / self.canvas.winfo_height()
-            self.sendToSlave('down,{},{}'.format(event.x, event.y))
+            calcx = float(event.x) / self.canvas.winfo_width() * 100
+            calcy = float(event.y) / self.canvas.winfo_height() * 100
+            try:
+                self.sendToSlave('down,{},{}'.format(calcx, calcy))
+            except Exception as e:
+                pass
         self.oldX = event.x
         self.oldY = event.y
 
@@ -240,7 +246,12 @@ class Paint(object):
     def sendToSlave(self, line): 
         if self.slavesocket: 
             line = line + '\n'
-            self.slavesocket.send(str.encode(line))
+            print("SEND {}".format(line))
+            try: 
+                self.slavesocket.send(str.encode(line))
+            except Exception as e:
+                print("slave is dead")
+                self.slavesocket = None
 
     # only single slave supported rn
     # connecting a new slave will kill the other slave :O
