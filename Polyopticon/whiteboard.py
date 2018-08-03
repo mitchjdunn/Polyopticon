@@ -73,12 +73,14 @@ class Paint(object):
         self.slaveAttached = False
         self.slaveIP = None
         self.master = master
+        self.sendQueue = []
         # Setup the Tk interface
         self.color = 0
         self.currentColor = 0
         self.root = Tk()
         self.slavesocket = None
         self.colors = ['red', 'blue', 'white', 'green', 'purple', 'orange']
+
 
         self.canvas = Canvas(self.root, bg='black')# , width=600, height=600)
         self.canvas.pack(fill=BOTH, expand=YES, padx = 5, pady = 5)
@@ -108,7 +110,6 @@ class Paint(object):
             BroadcastListener(self) 
         else:
             d = DrawSocket(self)
-            # TODO Send the broadcast packet
             threading.Thread(target = self.waitForMaster, args=[d] ).start()
 
 
@@ -116,12 +117,27 @@ class Paint(object):
         broadcast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
         broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
         broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        while not drawsocket.socketConnected():
-            print("pinging for master")
-            broadcast.sendto(str.encode('whiteboard'), ('255.255.255.255', 15272))
-            sleep(3)
-        print("stopping broadcasts")
+        while True:
+            print("starting broadcasts")
+            while not drawsocket.socketConnected():
+                print("pinging for master")
+                broadcast.sendto(str.encode('whiteboard'), ('255.255.255.255', 15272))
+                sleep(3)
+            print("broadcasts stopped")
+            while drawsocket.socketConnected():
+                sleep(1)
         
+    def slaveSendThread(self, socket):
+        while True:
+            currentPos = 0
+            while currentPos < len(self.sendQueue):
+                try: 
+                    self.slavesocket.send(str.encode(line))
+                except Exception as e:
+                    print("slave is dead")
+                    return
+                
+            
     def startLoop(self): 
         self.setup()
         self.root.mainloop()
@@ -153,8 +169,6 @@ class Paint(object):
 
     def chooseColor(self):
         self.eraserOn = False
-        # TODO make like 5 colors to cycle through
-        # TODO Set color on slaves
         self.color = (self.color + 1) % len(self.colors)
         self.sendToSlave('color,{}'.format(self.color))
 
@@ -205,7 +219,7 @@ class Paint(object):
         self.root.update()
         w = float(self.canvas.winfo_width())
         h = float(self.canvas.winfo_height())
-        print("canvas WxH = {} {}".format(w, h))
+        # print("canvas WxH = {} {}".format(w, h))
         
         # normalized from x 
         nfX = (float(fromX) / 100.0) * w
@@ -226,6 +240,9 @@ class Paint(object):
     def checkForButtonPress(self, x, y):
         return False
 
+    def clearDrawing(self):
+        self.root.update()
+        self.canvas.create_rectangle(0, 0, self.canvas.winfo_width, self.canvas.winfo_height, fill='black')
     def handle(self, line):
         if line.rstrip() is '':
             return
@@ -263,28 +280,24 @@ class Paint(object):
             
 
     def sendToSlave(self, line): 
-        if self.slavesocket: 
-            line = line + '\n'
-            print("SEND {}".format(line))
-            try: 
-                self.slavesocket.send(str.encode(line))
-            except Exception as e:
-                print("slave is dead")
-                self.slavesocket = None
+        line = line.rstrip() + '\n'
+        print("SEND {}".format(line))
+        self.sendQueue.append(str.encode(line)
 
     # only single slave supported rn
     # connecting a new slave will kill the other slave :O
     def addSlave(self, ipaddr):
         print("adding slave {}".format(ipaddr)) 
         self.slaveIP = ipaddr
-        self.slavesocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.slavesocket.connect((ipaddr, 15273))
+        slavesocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        slavesocket.connect((ipaddr, 15273))
         
-        self.slaveAttached = True
+        slaveAttached = True
         # make sure slave gets the write pen type off the bat
         self.sendToSlave("color,{}".format(self.color))
         self.sendToSlave("size,{}".format(self.lineWidth))
-        
+        threading.Thread(target = slaveSendThread, args = [slavesocket])
+
 if __name__ == '__main__':
     print("Setting up tk")
     p = Paint(master=True)
