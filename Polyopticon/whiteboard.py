@@ -75,21 +75,21 @@ class Paint(object):
         self.canvas = Canvas(self.root, bg='black')# , width=600, height=600)
         self.canvas.pack(fill=BOTH, expand=YES, padx = 5, pady = 5)
 
-        self.penButton = Button(self.root, text='pen', command=self.usePen)
+        self.penButton = Button(self.root, text='pen', command=self.usePen, bg="dark blue", fg = "white")
         self.penButton.configure(width = 10, height = 6, bd=0) 
         self.canvas.create_window(10, 10, anchor=NW, window=self.penButton)
 
-        self.colorButton = Button(self.root, text='color', command=self.chooseColor)
+        self.colorButton = Button(self.root, text='color',command=self.chooseColor, bg="dark blue", fg = "white")
         self.colorButton.configure(width = 10, height = 6, bd = 0) 
         self.canvas.create_window(10, 90, anchor=NW, window=self.colorButton)
 
-        self.eraserButton = Button(self.root, text='eraser', command=self.useEraser)
+        self.eraserButton = Button(self.root, text='eraser', command=self.useEraser, bg="dark blue", fg = "white")
         self.eraserButton.configure(width = 10, bd = 0, height = 6)
         self.canvas.create_window(10, 170, anchor=NW, window=self.eraserButton)
 
         self.sizes = [1, 3, 5, 8, 10, 20]
         self.currentSize = 0
-        self.sizeButton = Button(self.root, text='Size (1)', command=self.changeSize)
+        self.sizeButton = Button(self.root, text='Size (1)', command=self.changeSize, bg="dark blue", fg = "white")
         self.sizeButton.configure(width = 10, bd = 0, height = 6)
         self.canvas.create_window(10, 250, anchor=NW, window=self.sizeButton)
 
@@ -221,8 +221,9 @@ class Paint(object):
         if 'down' in line: 
             print('got down')
             coords = line.split(sep=',')
-            if not self.checkForButtonPress(coords[0], coords[1]):
+            if not self.checkForButtonPress(coords[1], coords[2]):
                 print("setting prev")
+                print(coords)
                 self.prev = (coords[1], coords[2])
                 print(self.prev)
         elif 'up' in line:

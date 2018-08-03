@@ -31,7 +31,7 @@ class Whiteboard:
         self.p.handle('up') 
     def down(self, pos):
         self.penDown = True
-        self.p.handle("down," + str(pos[1]) + ',' + str(pos[1]))
+        self.p.handle("down," + str(pos[0]) + ',' + str(pos[1]))
     def newLEDPos(self, pos):
         self.lastPen = pos
         self.p.handle(str(pos[0]) +','+str(pos[1]))
@@ -83,7 +83,7 @@ class Whiteboard:
                 if self.penDown:
                     #checking distance between pen strokes -- don't want misfires to draw lines
                     if self.lastPen is not None:
-                        if abs(self.lastPen[0] - LEDx) > .1 or abs(self.lastPen[1] - LEDy) > .1:
+                        if abs(self.lastPen[0] - LEDx) > 5 or abs(self.lastPen[1] - LEDy) > 5:
                             self.up()
                             self.down((LEDx, LEDy))
                     self.newLEDPos((LEDx,LEDy))
@@ -139,7 +139,7 @@ def main():
     w = Whiteboard(p)
     #Get host from network discovery.
     w.debug = True
-    w.prod = False
+    w.prod = True
     w.runVideo('demotest.mp4')
     #w.runVideo("udp://" + host + ":" + port)
 
