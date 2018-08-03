@@ -122,6 +122,9 @@ class Paint(object):
 
     def chooseColor(self):
         self.eraserOn = False
+        redButton = Button(self.root, text='RED')
+        redButton.place(x=20, y=200)
+        
         # TODO make like 5 colors to cycle through
         # TODO Set color on slaves
 
