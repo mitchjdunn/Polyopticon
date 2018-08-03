@@ -27,15 +27,13 @@ class DrawSocket(object):
     # Recv data from client and translate that to lines in the Tk app
     def listenToClient(self, client, address):
         print("New client connected")
-        size = 128
-        prev = None
+        size = 1024
         while True:
             try:
                 data = client.recv(size)
                 if data:
                     for line in data.decode("utf-8").split(sep='\n'):
                         self.paint.handle(line)
-                        print(line)
                 else:
                     raise RuntimeError('Client Disconnect')
             except Exception as e:
@@ -155,8 +153,14 @@ class Paint(object):
                                width=self.lineWidth, fill=paintColor,
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
             if self.master:
-                self.sendToSlave('{},{}'.format(event.x, event.y))
+                self.root.update()
+                calcx = float(event.x) / self.canvas.winfo_width()
+                calcy = float(event.y) / self.canvas.winfo_height()
+                self.sendToSlave('{},{}'.format(calcx, calcy))
         elif self.master:
+            self.root.update()
+            calcx = float(event.x) / self.canvas.winfo_width()
+            calcy = float(event.y) / self.canvas.winfo_height()
             self.sendToSlave('down,{},{}'.format(event.x, event.y))
         self.oldX = event.x
         self.oldY = event.y
@@ -175,8 +179,8 @@ class Paint(object):
 
     def normalizedDrawLine(self, fromX, fromY, toX, toY):
         self.root.update()
-        w = self.canvas.winfo_width()
-        h = self.canvas.winfo_height()
+        w = float(self.canvas.winfo_width())
+        h = float(self.canvas.winfo_height())
         print("canvas WxH = {} {}".format(w, h))
         
         # normalized from x 
@@ -191,7 +195,7 @@ class Paint(object):
             
         print("drawing line line from {},{} to {},{}".format(nfX, nfY, ntX, ntY))
         self.canvas.create_line(nfX, nfY, ntX, ntY,
-                               width=self.lineWidth, fill=self.color,
+                               width=self.lineWidth, fill=self.colors[self.color],
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
 
     # TODO
@@ -199,20 +203,29 @@ class Paint(object):
         return False
 
     def handle(self, line):
+        if line.rstrip() is '':
+            return
+
         # if i am the master send to the slave also to keep him up to date
         if self.master: 
             self.sendToSlave(line)
 
         if 'down' in line: 
+            print('got down')
             coords = line.split(sep=',')
-            if not self.checkForButtonPress:
+            if not self.checkForButtonPress(coords[0], coords[1]):
+                print("setting prev")
                 self.prev = (coords[1], coords[2])
+                print(self.prev)
         elif 'up' in line:
+            print('got up')
             coords = line.split(sep=',')
             self.prev = None
         elif 'color' in line:
+            print('got color')
             self.setColor(int(line.split(sep=',')[1]))
         elif 'size' in line: 
+            print('got size')
             self.setSize(line.split(sep=',')[1])
         elif self.prev is not None:
             coords = line.split(sep=',')
