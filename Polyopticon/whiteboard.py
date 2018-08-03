@@ -96,7 +96,7 @@ class Paint(object):
         self.color = askcolor(color=self.color)[1]
 
     def useEraser(self):
-        self.activateButton(self.eraser_button, eraser_mode=True)
+        self.activateButton(self.eraserButton, eraser_mode=True)
 
     def activateButton(self, some_button, eraser_mode=False):
         self.activateButton.config(relief=RAISED)

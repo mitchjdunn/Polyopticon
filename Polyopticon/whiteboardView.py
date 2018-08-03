@@ -3,6 +3,7 @@ import time
 import cv2
 import numpy as np
 import math
+from whiteboard import Paint
 from border import Border
 
 class cvHelper:
@@ -36,6 +37,19 @@ class Whiteboard:
         self.sock.send(str.encode(mesg +"\n"))
         print(mesg)
         return
+
+    def up(self):
+        self.penDown = False
+        self.send("up")
+    def down(self, pos):
+        self.penDown = True
+        self.send("down," + str(pos[1]) + ',' + str(pos[1]))
+        #draw
+
+    def newLEDPos(self, pos):
+        self.lastPen = pos
+        self.send(str(pos[0]) +','+str(pos[1]))
+        #draw
 
     def nextFrame(self, img):
         if self.debug:
@@ -79,12 +93,11 @@ class Whiteboard:
                     #checking distance between pen strokes -- don't want misfires to draw lines
                     if self.lastPen is not None:
                         if abs(self.lastPen[0] - LEDx) > .1 or abs(self.lastPen[1] - LEDy) > .1:
-                            self.send('up')
-                            self.send('down' + str(LEDx) + ',' + str(LEDy))
-                    self.send(str(LEDx) + ',' + str(LEDy))
+                            self.up()
+                            self.down((LEDx, LEDy))
+                    self.newLEDPos(str(LEDx) + ',' + str(LEDy))
                 else:
-                    self.penDown = True
-                    self.send("down," + str(LED[0]) + ',' + str(LED[1]))
+                    self.down((LEDx, LEDy))
         else:
             if self.debug:
                 print('No LED')
@@ -132,6 +145,8 @@ class Whiteboard:
 
 def main():
     w = Whiteboard()
+    p = Paint()
+    p.setup()
     #Get host from network discovery.
     host = 'jon-laptop'
     port = 15273
