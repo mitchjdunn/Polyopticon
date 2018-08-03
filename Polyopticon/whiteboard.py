@@ -46,7 +46,8 @@ class DrawSocket(object):
                 return False
     
 class BroadcastListener(object): 
-    def __init__(self):
+    def __init__(self, paint):
+        self.paint = paint
         client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
         client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         client.bind(("", 15272))
@@ -55,16 +56,21 @@ class BroadcastListener(object):
         while True:
             data, addr = client.recvfrom(1024)
             print("received message: %s, from: %s"%(data, addr))
-            # TODO make a socket connection with `addr` and send the shit over 
-            # send color and size first 
-
+            if 'whiteboard' in data:
+                self.paint.addSlave(addr)
+            
 
 class Paint(object):
 
     def __init__(self, master=False):
+        self.slaveAttached = False
         self.master = master
         # Setup the Tk interface
+        self.color = 0
+        self.currentColor = 0
         self.root = Tk()
+        self.slavesocket = None
+        self.colors = ['red', 'blue', 'white', 'green', 'purple', 'orange']
 
         self.canvas = Canvas(self.root, bg='black')# , width=600, height=600)
         self.canvas.pack(fill=BOTH, expand=YES, padx = 5, pady = 5)
@@ -88,8 +94,10 @@ class Paint(object):
         self.canvas.create_window(10, 250, anchor=NW, window=self.sizeButton)
 
         self.history = ""
+
+        print("setting up socket")
         if master: 
-            BroadcastSocket() 
+            BroadcastListener(self) 
         else:
             DrawSocket(self)
 
@@ -100,43 +108,42 @@ class Paint(object):
     def changeSize(self):
         self.currentSize = (self.currentSize + 1) % len(self.sizes)
         self.sizeButton.configure(text="Size (%d)"%self.sizes[self.currentSize])
-        # TODO change size on slaves
+        self.sendToSlave('size,{}'.format(self.sizes[self.currentSize]))
 
     def setup(self):
         self.oldX = None
         self.oldY = None
         self.lineWidth = self.sizes[self.currentSize]
-        self.color = 'white'
         self.eraserOn = False
         self.activateButton = self.penButton
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
 
     def usePen(self):
-        self.activateButton(self.penButton)
-        # TODO set color to real color to slaves
+        self.eraserOn = False
+        self.color = (self.color + 1) % len(self.colors)
+        self.activateButton = self.penButton
 
     def useEraser(self):
-        self.activateButton(self.eraserButton, eraser_mode=True)
-        # TODO set color to black over network
+        self.eraserOn = True
+        self.sendToSlave('color,black')
+        self.activateButton = self.eraserButton
 
     def chooseColor(self):
         self.eraserOn = False
-        redButton = Button(self.root, text='RED')
-        redButton.place(x=20, y=200)
-        
         # TODO make like 5 colors to cycle through
         # TODO Set color on slaves
+        self.color = (self.color + 1) % len(self.colors)
+        self.sendToSlave('color,{}'.format(self.color))
 
-    def activateButton(self, some_button, eraser_mode=False):
+    def activateButton(self, some_button):
         self.activateButton.config(relief=RAISED)
         some_button.config(relief=SUNKEN)
         self.activateButton = some_button
-        self.eraserOn = eraser_mode
 
     def paint(self, event):
         self.lineWidth = self.sizes[self.currentSize]
-        paintColor = 'black' if self.eraserOn else self.color
+        paintColor = 'black' if self.eraserOn else self.colors[self.color]
         if self.oldX and self.oldY:
             self.canvas.create_line(self.oldX, self.oldY, event.x, event.y,
                                width=self.lineWidth, fill=paintColor,
@@ -176,6 +183,10 @@ class Paint(object):
                                width=self.lineWidth, fill=self.color,
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
     def handle(self, line):
+        # if i am the master send to the slave also to keep him up to date
+        if self.master: 
+            self.sendToSlave(line)
+
         if 'down' in line: 
             coords = line.split(sep=',')
             if not self.paint.checkForButtonPress:
@@ -184,23 +195,41 @@ class Paint(object):
             coords = line.split(sep=',')
             prev = None
         elif 'color' in line:
-            self.paint.setColor(line.split(sep=',')[1])
+            self.setColor(line.split(sep=',')[1])
         elif 'size' in line: 
-            self.paint.setSize(line.split(sep=',')[1])
+            self.setSize(line.split(sep=',')[1])
         elif prev is not None:
             coords = line.split(sep=',')
             a = prev[0]
             b = prev[1]
             c = coords[0]
             d = coords[1]
-            self.paint.normalizedDrawLine(prev[0], prev[1], coords[0], coords[1])
+            self.normalizedDrawLine(prev[0], prev[1], coords[0], coords[1])
             prev = (coords[0], coords[1])
         else:
             print('unknown message')
             print(line)
 
+    def sendToSlave(self, line): 
+        if self.slavesocket: 
+            line = line + '\n'
+            self.slavesocket.send(str.encode('line'))
+
+    # only single slave supported rn
+    # connecting a new slave will kill the other slave :O
+    def addSlave(self, ipaddr):
+        self.slavesocket = socket.socket(socket.AF_NET, socket.SOCK_STREAM)
+        self.slavesocket.connect((ipaddr, 15273))
+        
+        # make sure slave gets the write pen type off the bat
+        self.sendToSlave("color,{}".format(self.color))
+        self.sendToSlave("size,{}".format(self.lineWidth))
+        
 if __name__ == '__main__':
     print("Setting up tk")
-    p = Paint(master=False)
+    p = Paint(master=True)
     p.startLoop()
-
+    
+    print("Sleeping") 
+    time.sleep(5)
+    p2 = Paint(master=False)
