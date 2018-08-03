@@ -2,6 +2,7 @@ from tkinter import *
 import threading
 import socket 
 import traceback
+from time import sleep
 from tkinter.colorchooser import askcolor
 
 class DrawSocket(object): 
@@ -9,6 +10,7 @@ class DrawSocket(object):
         # Setup server socket
         self.paint = paint
         self.port = 15273
+        self.connected = False
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.serverSocket.bind(('0.0.0.0', self.port))
@@ -22,10 +24,12 @@ class DrawSocket(object):
         while True:
             client, address = self.serverSocket.accept()
             # client.settimeout(60)
-            threading.Thread(target = self.listenToClient,args = (client,address)).start()
+            # threading.Thread(target = self.listenToClient,args = (client,address)).start()
+            self.listenToClient(client, address)
 
     # Recv data from client and translate that to lines in the Tk app
     def listenToClient(self, client, address):
+        self.connected = True
         print("New client connected")
         size = 1024
         while True:
@@ -38,10 +42,14 @@ class DrawSocket(object):
                     raise RuntimeError('Client Disconnect')
             except Exception as e:
                 print('client disconnected due to error') 
-                print(e)
+                # print(e)
                 traceback.print_exc()
                 client.close()
+                self.connected = False
                 return False
+
+    def socketConnected(self):
+        return self.connected
     
 class BroadcastListener(object): 
     def __init__(self, paint):
@@ -58,7 +66,6 @@ class BroadcastListener(object):
             print("received message: %s, from: %s"%(data, addr))
             if 'whiteboard' in data.decode("utf-8"):
                 self.paint.addSlave(addr[0])
-            
 
 class Paint(object):
 
@@ -99,13 +106,21 @@ class Paint(object):
         if master: 
             BroadcastListener(self) 
         else:
-            DrawSocket(self)
+            d = DrawSocket(self)
             # TODO Send the broadcast packet
-            broadcast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
-            broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
-            broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            broadcast.sendto(str.encode('whiteboard'), ('255.255.255.255', 15272))
+            threading.Thread(target = self.waitForMaster, args=[d] ).start()
 
+
+    def waitForMaster(self, drawsocket):
+        broadcast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+        broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
+        broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        while not drawsocket.socketConnected():
+            print("pinging for master")
+            broadcast.sendto(str.encode('whiteboard'), ('255.255.255.255', 15272))
+            sleep(3)
+        print("stopping broadcasts")
+        
     def startLoop(self): 
         self.setup()
         self.root.mainloop()
