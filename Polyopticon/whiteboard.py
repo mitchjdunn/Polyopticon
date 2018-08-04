@@ -47,7 +47,7 @@ class VideoSocket():
         try:
             camera = picamera.PiCamera(framerate = 30)
             camera.resolution = (1280,720)
-            camera.exposure_mode = 'spotlight'
+            #camera.exposure_mode = 'spotlight'
             while True:
                 stream = io.BytesIO()
                 for _ in camera.capture_continuous(stream, 'jpeg', use_video_port = True):

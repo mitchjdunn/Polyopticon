@@ -36,7 +36,7 @@ class WhiteboardView:
         self.videosocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def connect(self):
-        time.sleep(2)
+        sleep(2)
         for port in self.ports:
             try:
                 if self.debug:
