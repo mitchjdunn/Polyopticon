@@ -404,5 +404,5 @@ class Paint(object):
 
 if __name__ == '__main__':
     print("Setting up tk")
-    p = Paint(master=True, debug=True)
+    p = Paint(master=False, debug=True)
     p.startLoop()

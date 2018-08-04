@@ -1,6 +1,7 @@
 from time import sleep
 import cv2
 import threading
+import socket
 import numpy as np
 import math
 import io
