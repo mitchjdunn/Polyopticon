@@ -154,7 +154,7 @@ class WhiteboardView:
     #this is mostly for testing. can break video frame by frame
     #video can be given via file path, camera port(as int), or via url
     #ex. /path/to/file, 0, tcp//@ip:port
-    def runVideo(self, videoPath):
+    def runVideoFromPath(self, videoPath):
         if self.debug:
             print("runVideo({})".format(videoPath))
         cap = cv2.VideoCapture(videoPath)
