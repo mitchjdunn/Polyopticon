@@ -1,8 +1,11 @@
 from time import sleep
 import cv2
+import threading
+import socket
 import numpy as np
 import math
-from whiteboard import Paint
+import io
+import struct
 from border import Border
 
 class cvHelper:
@@ -14,24 +17,42 @@ class cvHelper:
          mask = cv2.inRange(hsv, lower_white, upper_white)
          return cv2.bitwise_and(img,img, mask= mask)
 
-class Whiteboard:
+class WhiteboardView:
 
 
-    def __init__(self, whiteboard):
+    def __init__(self, whiteboard, debug=False, prod=False):
         self.p = whiteboard
         self.border = None
-        self.debug = False
-        self.prod = False
+        self.debug = debug
+        self.prod = prod
         self.penDown = False
         self.lastPen = None
         self.readyMessageSent = False
+        self.s = socket.socket()
+        self.ports = [4545,4546,4547,4548]
+
+
+        #Socket for video stream
+        self.videosocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    def connect(self):
+        for port in self.ports:
+            try:
+                self.s.connect((p.slaveIP, port))
+                return
+            except:
+                print('port {} failed'.format(port))
+                pass
+        raise SystemError('failed to connect to all ports')
 
     def up(self):
         self.penDown = False
         self.p.handle('up') 
+
     def down(self, pos):
         self.penDown = True
         self.p.handle("down," + str(pos[0]) + ',' + str(pos[1]))
+
     def newLEDPos(self, pos):
         self.lastPen = pos
         self.p.handle(str(pos[0]) +','+str(pos[1]))
@@ -49,7 +70,6 @@ class Whiteboard:
                 #self.send('calibrating')
         if not self.border.borderFound:
             #CHANGE IMG BEFORE FINDBORDER
-            #img1 = Whiteboard.colorSelect(img.copy())
             img1 = cvHelper.colorSelect2(img.copy())
             img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
             self.border.findBorder(img1)
@@ -70,7 +90,7 @@ class Whiteboard:
             img2 = cv2.drawContours(img2, [box], 0,(0,0,255), 2)
         
         #CHECKING FOR LED
-        #img1 = Whiteboard.colorSelect(img.copy())
+        #img1 = WhiteboardView.colorSelect(img.copy())
         img1 = cvHelper.colorSelect2(img.copy())
         img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         LED = self.detectLED(img1)
@@ -99,18 +119,53 @@ class Whiteboard:
         if self.debug:
             cv2.imshow('img', img)
             cv2.imshow('img2', img2)
-    def runVideo(self, videoPath):
+
+    #this method reads images sent over a socket via the slave whiteboard.
+    def runVideo(self):
+        self.connect()
         if self.debug:
             print("runVideo")
+        connection = self.s.makefile('rb')
+        try:
+            while True:
+                #Socket first sends how long the image will be
+                imLen = stuct.unpack('<L', connection.read(struct.calcsize('<L')))[0]
+                while not imLen:
+                    if self.debug:
+                        print("Waiting for imLen")
+                    #assume network issues for no imLen
+                    #TODO
+                    imLen = stuct.unpack('<L', connection.read(struct.calcsize('<L')))[0]
+            
+                if self.debug:
+                    print('imLen: {}'.format(imLeng))
+
+                stream = io.BytesIO()
+                stream.write(connection.read(image_len))
+                #data is the image recieved from the stream converted for opencv
+                data = np.fromstring(stream.getvalue(), dtype=np.uint8)
+                img = cv2.imdecode(data,1)
+                self.nextFrame(img) 
+        except:
+            connection.close()
+            self.s.close()
+            raise SystemError('Error while recieving images via socket')        
+                
+    #this is mostly for testing. can break video frame by frame
+    #video can be given via file path, camera port(as int), or via url
+    #ex. /path/to/file, 0, tcp//@ip:port
+    def runVideoFromPath(self, videoPath):
+        if self.debug:
+            print("runVideo({})".format(videoPath))
         cap = cv2.VideoCapture(videoPath)
 
         ret, img = cap.read()
         if not ret and self.debug:
             print("no video")
-            sleep(1)
         while ret:
             self.nextFrame(img)
-            cv2.waitKey()
+            print("hiya")
+            cv2.waitKey(1)
             ret, img = cap.read()
 
     def detectLED(self, img):
@@ -135,21 +190,20 @@ class Whiteboard:
         return None
 
 def main():
-    p = Paint(master = True)
-    p.setup()
-    w = Whiteboard(p)
+    p = Paint(master = True, debug=True)
     #Get host from network discovery.
-    w.debug = True
-    w.prod = True
-    #w.runVideo('demotest.mp4')
-    #while not p.slaveAttached:
-    #    print("slave not found")
-    #    sleep(1)
-    #host = p.slaveIP
-    host = "192.168.1.6"
-    print(host)
-    port = '4545'
-    w.runVideo("udp://" + host + ":" + port)
+    while not p.slaveAttached:
+        print("slave not found")
+        sleep(1)
+    try:
+        w = WhiteboardView(p, debug=True, prod=True)
+        #w.connect()
+        #threading.Thread(target=w.runVideo).start() 
+    except:
+        print("is kill")
+    
+    p.startLoop()
+    #w.runVideo("udp://@" + host + ":" + port)
 
 if __name__ == '__main__':
     main()
