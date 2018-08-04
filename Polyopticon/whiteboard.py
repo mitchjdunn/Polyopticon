@@ -21,7 +21,7 @@ class VideoSocket():
     def bind(self):
         for port in self.ports:
             try:
-                self.s.bind((ip, port))
+                self.s.bind((self.ip, port))
                 if self.debug:
                     print('bound to port {}'.format(port))
                 return
