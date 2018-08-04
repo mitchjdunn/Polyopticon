@@ -77,6 +77,7 @@ class WhiteboardView:
             #CHANGE IMG BEFORE FINDBORDER
             img1 = cvHelper.colorSelect2(img.copy())
             img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+            cv2.imshow('border', img1)
             self.border.findBorder(img1)
 
             if self.debug:
