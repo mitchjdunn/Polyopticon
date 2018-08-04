@@ -64,6 +64,8 @@ class WhiteboardView:
     def nextFrame(self, img):
         if self.debug:
             print("next Frame")
+            cv2.imshow('original Image', img)
+            cv2.waitKey(1)
         #CHECKING FOR BORDER
         if self.border is None:
             self.border = Border()
@@ -129,30 +131,28 @@ class WhiteboardView:
         if self.debug:
             print("runVideo")
         connection = self.s.makefile('rb')
-        try:
-            while True:
+        while True:
+            try:
                 #Socket first sends how long the image will be
-                imLen = stuct.unpack('<L', connection.read(struct.calcsize('<L')))[0]
+                imLen = struct.unpack('<L', connection.read(struct.calcsize('<L')))[0]
                 while not imLen:
                     if self.debug:
                         print("Waiting for imLen")
                     #assume network issues for no imLen
                     #TODO
-                    imLen = stuct.unpack('<L', connection.read(struct.calcsize('<L')))[0]
+                    imLen = struct.unpack('<L', connection.read(struct.calcsize('<L')))[0]
             
                 if self.debug:
-                    print('imLen: {}'.format(imLeng))
+                    print('imLen: {}'.format(imLen))
 
                 stream = io.BytesIO()
-                stream.write(connection.read(image_len))
+                stream.write(connection.read(imLen))
                 #data is the image recieved from the stream converted for opencv
                 data = np.fromstring(stream.getvalue(), dtype=np.uint8)
                 img = cv2.imdecode(data,1)
                 self.nextFrame(img) 
-        except:
-            connection.close()
-            self.s.close()
-            raise SystemError('Error while recieving images via socket')        
+            except:
+                print('Error while recieving images via socket')        
                 
     #this is mostly for testing. can break video frame by frame
     #video can be given via file path, camera port(as int), or via url
