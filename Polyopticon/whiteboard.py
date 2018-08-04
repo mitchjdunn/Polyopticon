@@ -45,7 +45,7 @@ class VideoSocket():
         connection = self.s.accept()[0].makefile('wb')
         
         try:
-            camera = picamera.Picamera(framrate = 30)
+            camera = picamera.PiCamera(framrate = 30)
             camera.resolution = (1280,720)
             camera.exposure_mode = 'spotlight'
             while True:
@@ -61,8 +61,8 @@ class VideoSocket():
                     stream.seek(0)
                     stream.truncate()
         finally:
-            connection.close
-            s.close
+            connection.close()
+            self.s.close()
 
 class DrawSocket(object): 
     def __init__(self, paint, debug=False):
