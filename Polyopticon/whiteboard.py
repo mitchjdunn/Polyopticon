@@ -1,9 +1,14 @@
 from tkinter import *
+import io
+from tkinter.filedialog import askopenfilename
+from PIL import Image 
+from PIL import ImageTk
 import threading
 import socket 
 import traceback
 from time import sleep
 from tkinter.colorchooser import askcolor
+import base64
 
 class DrawSocket(object): 
     def __init__(self, paint):
@@ -44,7 +49,7 @@ class DrawSocket(object):
                 lines = string.split(sep='\n')
 
                 if not string.endswith('\n'):
-                    print("adding line to next buffer")
+                    # print("adding line to next buffer")
                     data = str.encode(lines[-1])
                     lines = lines[:-1]
                 else:
@@ -120,9 +125,81 @@ class Paint(object):
         print("setting up socket")
         if master: 
             BroadcastListener(self) 
+
+            self.menubar = Menu(self.root)
+        
+            self.filemenu = Menu(self.menubar, tearoff=0)
+            self.filemenu.add_command(label="Upload Picture", command=self.insertImage)
+            self.filemenu.add_command(label="Save Picture", command=self.saveCanvasToFile)
+            self.filemenu.add_separator()
+            self.filemenu.add_command(label="Exit", command=self.root.quit)
+            self.menubar.add_cascade(label="File", menu=self.filemenu)
+            self.root.config(menu=self.menubar)
         else:
             d = DrawSocket(self)
             threading.Thread(target = self.waitForMaster, args=[d] ).start()
+
+    def insert64image(self, base64string):
+        fh = open('temp.png', 'wb')
+        fh.write(base64.b64decode(base64string))
+        fh.close()
+        self.insertImageHelper('temp.png')
+        return
+        image = Image.open(io.BytesIO(base64.b64decode(base64string)))
+        # filething = cStringIO.StringIO(base64.b64decode(base64string))
+        # image = Image.open(filething)
+        # Resize the image to fit in the canvas 
+        if image.size[0] > image.size[1]: 
+            basewidth = self.canvas.winfo_width() - 110
+            wpercent = (basewidth/float(image.size[0]))
+            hsize = int((float(image.size[1])*float(wpercent)))
+            image = image.resize((basewidth,hsize), Image.ANTIALIAS)
+        else:
+            baseheight = self.canvas.winfo_height()
+            hpercent = (baseheight/float(image.size[1]))
+            wsize = int((float(image.size[0])*float(hpercent)))
+            image = image.resize((baseheight,wsize), Image.ANTIALIAS)
+            
+        print("something")
+        self.canvasimage = ImageTk.PhotoImage(image)
+        self.canvas.create_image(110, 0, image=self.canvasimage, anchor=NW)
+        
+    def insertImage(self):
+        filename = askopenfilename()
+        self.insertImageHelper(filename)
+        
+    def insertImageHelper(self, filename):
+        image = Image.open(filename)
+        self.root.update()
+
+        print(image.size)
+    
+        # Resize the image to fit in the canvas 
+        if image.size[0] > image.size[1]: 
+            basewidth = self.canvas.winfo_width() - 110
+            wpercent = (basewidth/float(image.size[0]))
+            hsize = int((float(image.size[1])*float(wpercent)))
+            image = image.resize((basewidth,hsize), Image.ANTIALIAS)
+        else:
+            baseheight = self.canvas.winfo_height()
+            hpercent = (baseheight/float(image.size[1]))
+            wsize = int((float(image.size[0])*float(hpercent)))
+            image = image.resize((baseheight,wsize), Image.ANTIALIAS)
+            
+        print("something")
+        self.canvasimage = ImageTk.PhotoImage(image)
+        self.canvas.create_image(110, 0, image=self.canvasimage, anchor=NW)
+
+        if self.master:
+            with open(filename, 'rb') as f:
+                b64image = base64.b64encode(f.read())
+                b64image = b64image.decode("utf-8")
+                print('b64 image: {}'.format(b64image))
+                self.sendToSlave('image,{}'.format(b64image))
+
+    def saveCanvasToFile(self):
+        # TODO 
+        pass
 
 
     def waitForMaster(self, drawsocket):
@@ -146,7 +223,7 @@ class Paint(object):
             while currentPos < len(self.sendQueue):
                 try: 
                     line = self.sendQueue[currentPos]
-                    print("SEND {}".format(line))
+                    # print("SEND {}".format(line))
                     socket.send(line)
                     currentPos = currentPos + 1
                 except Exception as e:
@@ -268,7 +345,7 @@ class Paint(object):
         if self.master: 
             self.sendToSlave(line)
 
-        if 'down' in line: 
+        if line.startswith('down'):
             print('got down')
             coords = line.split(sep=',')
             if not self.checkForButtonPress(coords[1], coords[2]):
@@ -276,18 +353,23 @@ class Paint(object):
                 print(coords)
                 self.prev = (coords[1], coords[2])
                 print(self.prev)
-        elif 'up' in line:
+        elif line.startswith("up"):
             print('got up')
             coords = line.split(sep=',')
             self.prev = None
-        elif 'color' in line:
+        elif line.startswith("color"):
             print('got color')
             self.setColor(int(line.split(sep=',')[1]))
-        elif 'size' in line: 
+        elif line.startswith("size"):
             print('got size')
             self.setSize(line.split(sep=',')[1])
+        elif line.startswith("image"):
+            print('received image')
+            b64str = line.split(sep=',')[1]
+            print(b64str) 
+            self.insert64image(b64str)
         elif self.prev is not None:
-            print(line)
+            # print(line)
             coords = line.split(sep=',')
             try:
                 self.normalizedDrawLine(self.prev[0], self.prev[1], coords[0], coords[1])
