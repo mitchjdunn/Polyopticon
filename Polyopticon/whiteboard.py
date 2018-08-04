@@ -47,7 +47,7 @@ class VideoSocket():
         try:
             camera = picamera.PiCamera(framerate = 30)
             camera.resolution = (1280,720)
-            camera.rotation = 270
+            camera.rotation = 90
             #camera.exposure_mode = 'spotlight'
             while True:
                 stream = io.BytesIO()
