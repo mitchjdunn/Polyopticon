@@ -38,7 +38,8 @@ class WhiteboardView:
     def connect(self):
         for port in self.ports:
             try:
-                
+                if self.debug:
+                    print((self.p.slaveIP, port)) 
                 self.s.connect((self.p.slaveIP, port))
                 return
             except:

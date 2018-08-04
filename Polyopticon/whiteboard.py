@@ -42,7 +42,7 @@ class VideoSocket():
             return
         self.bind()
         self.s.listen(0)
-        connection = self.s.accept()[1].makefile('wb')
+        connection = self.s.accept()[0].makefile('wb')
         
         try:
             camera = picamera.Picamera(framrate = 30)
