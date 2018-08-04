@@ -10,7 +10,6 @@ try:
     s.bind(("0.0.0.0", ports[0]))
 except:
     s.bind(("0.0.0.0", ports[1]))
-    print("fag")
 s.listen(0)
 
 connection = s.accept()[0].makefile('wb')
@@ -25,27 +24,14 @@ try:
     time.sleep(2)
     while True:
         stream=io.BytesIO()
-        print(1)
         for foo in camera.capture_continuous(stream, 'jpeg',burst=True):
-
             size = struct.pack('<L', stream.tell())
-            print(2)
             connection.write(size)
-            print(size)
-            print(3)
             connection.flush()
-
-            print(4)
             stream.seek(0)
-            print(5)
             connection.write(stream.read())
-
-            print(6)
             stream.seek(0)
-            print(7)
             stream.truncate()
-
-            print(8)
 finally:
     connection.close()
     s.close()

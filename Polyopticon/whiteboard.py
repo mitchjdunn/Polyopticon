@@ -4,10 +4,64 @@ import socket
 import traceback
 from time import sleep
 from tkinter.colorchooser import askcolor
+import io
+import struct
+from whiteboardView import WhiteboardView
+class VideoSocket():
+    def __init__(self, debug=False):
+        self.ip = '0.0.0.0'
+        self.ports = [4545,4546,4547,4548]
+        self.debug = debug
+        self.s = socket.socket() 
+    def bind(self):
+        for port in ports:
+            try:
+                s.bind((ip, port))
+                if debug:
+                    print('bound to port {}'.format(port))
+                return
+            except:
+                if debug:
+                    print('failed to bind of port {}.'.format(port))
+        s.close()
+        raise SystemError('Failed to bind to all ports')                
+
+    
+    def sendImages(self):
+        try:
+            import picamera
+        except:
+            raise SystemError("No module picamera. Slave should be run on raspberry pi.")
+            self.s.close()
+            return
+        self.bind()
+        self.s.listen(0)
+        connection = s.accept()[1].makefile('wb')
+        
+        try:
+            camera = picamera.Picamera(framrate = 30)
+            camera.resolution = (1280,720)
+            camera.exposure_mode = 'spotlight'
+            while True:
+                stream = io.BytesIO()
+                for _ in camera.capture_continuous(stream, 'jpeg', use_video_port = True):
+                    size = struct.pack('<L', stream.tell())
+                    if debug:
+                        print('image size: {}'.format(size))
+                    connection.write(size)
+                    connection.flush()
+                    stream.seek(0)
+                    connection.write(stream.read())
+                    stream.seek(0)
+                    stream.truncate()
+        finally:
+            connection.close
+            s.close
 
 class DrawSocket(object): 
-    def __init__(self, paint):
+    def __init__(self, paint, debug=False):
         # Setup server socket
+        self.debug = debug
         self.paint = paint
         self.port = 15273
         self.connected = False
@@ -30,21 +84,24 @@ class DrawSocket(object):
     # Recv data from client and translate that to lines in the Tk app
     def listenToClient(self, client, address):
         self.connected = True
-        print("New client connected")
+        if self.debug:
+            print("New client connected")
         size = 2048
         data = b''
         while True:
             try:
                 data = data + client.recv(size)
                 if data is b'' or data.decode("utf-8").rstrip() is '':
-                    print("no data, client dead")
+                    if self.debug:
+                        print("no data, client dead")
                     return 
 
                 string = data.decode("utf-8")
                 lines = string.split(sep='\n')
 
                 if not string.endswith('\n'):
-                    print("adding line to next buffer")
+                    if self.debug:
+                        print("adding line to next buffer")
                     data = str.encode(lines[-1])
                     lines = lines[:-1]
                 else:
@@ -65,8 +122,10 @@ class DrawSocket(object):
         return self.connected
     
 class BroadcastListener(object): 
-    def __init__(self, paint):
-        print("Setting up broadcast listener")
+    def __init__(self, paint, debug=False):
+        self.debug= debug 
+        if self.debug:
+            print("Setting up broadcast listener")
         self.paint = paint
         self.client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
         self.client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -76,13 +135,15 @@ class BroadcastListener(object):
     def listen(self):
         while True:
             data, addr = self.client.recvfrom(1024)
-            print("received message: %s, from: %s"%(data, addr))
+            if self.debug:
+                print("received message: %s, from: %s"%(data, addr))
             if 'whiteboard' in data.decode("utf-8"):
                 self.paint.addSlave(addr[0])
 
 class Paint(object):
 
-    def __init__(self, master=False):
+    def __init__(self, master=False, debug=False):
+        self.debug = debug
         self.slaveAttached = False
         self.slaveIP = None
         self.master = master
@@ -117,25 +178,31 @@ class Paint(object):
 
         self.history = ""
 
-        print("setting up socket")
+        if self.debug:
+            print("setting up socket")
         if master: 
-            BroadcastListener(self) 
+            BroadcastListener(self, debug=self.debug) 
         else:
-            d = DrawSocket(self)
+            d = DrawSocket(self, debug=self.debug)
             threading.Thread(target = self.waitForMaster, args=[d] ).start()
 
+            v = VideoSocket(self, debug=self.debug)
+            theading.Thread(target = v.sendImages).start()            
 
     def waitForMaster(self, drawsocket):
         broadcast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
         broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
         broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         while True:
-            print("starting broadcasts")
+            if self.debug:
+                print("starting broadcasts")
             while not drawsocket.socketConnected():
-                print("pinging for master")
+                if self.debug:
+                    print("pinging for master")
                 broadcast.sendto(str.encode('whiteboard'), ('255.255.255.255', 15272))
                 sleep(3)
-            print("broadcasts stopped")
+            if self.debug:
+                print("broadcasts stopped")
             while drawsocket.socketConnected():
                 sleep(1)
         
@@ -146,12 +213,14 @@ class Paint(object):
             while currentPos < len(self.sendQueue):
                 try: 
                     line = self.sendQueue[currentPos]
-                    print("SEND {}".format(line))
+                    if self.debug:
+                        print("SEND {}".format(line))
                     socket.send(line)
                     currentPos = currentPos + 1
                 except Exception as e:
-                    print("slave is dead")
-                    print(e)
+                    if self.debug:
+                        print("slave is dead")
+                        print(e)
                     return
                 
             
@@ -269,35 +338,43 @@ class Paint(object):
             self.sendToSlave(line)
 
         if 'down' in line: 
-            print('got down')
+            if self.debug:
+                print('got down')
             coords = line.split(sep=',')
             if not self.checkForButtonPress(coords[1], coords[2]):
-                print("setting prev")
-                print(coords)
                 self.prev = (coords[1], coords[2])
-                print(self.prev)
+                if self.debug:
+                    print("setting prev")
+                    print(coords)
+                    print(self.prev)
         elif 'up' in line:
-            print('got up')
+            if self.debug:
+                print('got up')
             coords = line.split(sep=',')
             self.prev = None
         elif 'color' in line:
-            print('got color')
+            if self.debug:
+                print('got color')
             self.setColor(int(line.split(sep=',')[1]))
         elif 'size' in line: 
-            print('got size')
+            if self.debug:
+                print('got size')
             self.setSize(line.split(sep=',')[1])
         elif self.prev is not None:
-            print(line)
+            if self.debug:
+                print(line)
             coords = line.split(sep=',')
             try:
                 self.normalizedDrawLine(self.prev[0], self.prev[1], coords[0], coords[1])
                 self.prev = (coords[0], coords[1])
             except IndexError as e:
-                print('bad coords, ignoring')
+                if self.debug:
+                    print('bad coords, ignoring')
         else:
-            print('+ unknown message')
-            print(line)
-            print('- unknown message')
+            if self.debug:
+                print('+ unknown message')
+                print(line)
+                print('- unknown message')
             
 
     def sendToSlave(self, line): 
@@ -308,7 +385,8 @@ class Paint(object):
     # only single slave supported rn
     # connecting a new slave will kill the other slave :O
     def addSlave(self, ipaddr):
-        print("adding slave {}".format(ipaddr)) 
+        if self.debug:
+            print("adding slave {}".format(ipaddr)) 
         self.slaveIP = ipaddr
         slavesocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         slavesocket.connect((ipaddr, 15273))
@@ -316,11 +394,15 @@ class Paint(object):
         slaveAttached = True
         # make sure slave gets the write pen type off the bat
         threading.Thread(target = self.slaveSendThread, args = [slavesocket]).start()
+        #start image recognition
+        w = WhiteboardView(self, debug=self.debug, prod=True)
+
+        threading.Thread(target=w.runVideo).start()
 #        sleep(0.001)
 #        self.sendToSlave("color,{}".format(self.color))
 #        self.sendToSlave("size,{}".format(self.lineWidth))
 
 if __name__ == '__main__':
     print("Setting up tk")
-    p = Paint(master=True)
+    p = Paint(master=True, debug=True)
     p.startLoop()
