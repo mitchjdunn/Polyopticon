@@ -28,7 +28,7 @@ class VideoSocket():
             except:
                 if self.debug:
                     print('failed to bind of port {}.'.format(port))
-        s.close()
+        self.s.close()
         raise SystemError('Failed to bind to all ports')                
 
     
