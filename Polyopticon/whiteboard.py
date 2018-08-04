@@ -45,7 +45,7 @@ class VideoSocket():
         connection = self.s.accept()[0].makefile('wb')
         
         try:
-            camera = picamera.PiCamera(framrate = 30)
+            camera = picamera.PiCamera(framerate = 30)
             camera.resolution = (1280,720)
             camera.exposure_mode = 'spotlight'
             while True:
