@@ -14,7 +14,7 @@ class VideoSocket():
         self.debug = debug
         self.s = socket.socket() 
     def bind(self):
-        for port in ports:
+        for port in self.ports:
             try:
                 s.bind((ip, port))
                 if debug:

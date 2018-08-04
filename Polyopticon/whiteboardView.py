@@ -36,7 +36,7 @@ class WhiteboardView:
         self.videosocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def connect(self):
-        for port in ports:
+        for port in self.ports:
             try:
                 s.connect((p.slaveIP, port))
                 return
