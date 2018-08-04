@@ -16,12 +16,12 @@ class VideoSocket():
     def bind(self):
         for port in self.ports:
             try:
-                s.bind((ip, port))
-                if debug:
+                self.s.bind((ip, port))
+                if self.debug:
                     print('bound to port {}'.format(port))
                 return
             except:
-                if debug:
+                if self.debug:
                     print('failed to bind of port {}.'.format(port))
         s.close()
         raise SystemError('Failed to bind to all ports')                
@@ -46,7 +46,7 @@ class VideoSocket():
                 stream = io.BytesIO()
                 for _ in camera.capture_continuous(stream, 'jpeg', use_video_port = True):
                     size = struct.pack('<L', stream.tell())
-                    if debug:
+                    if self.debug:
                         print('image size: {}'.format(size))
                     connection.write(size)
                     connection.flush()
