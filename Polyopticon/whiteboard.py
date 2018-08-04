@@ -14,7 +14,7 @@ from whiteboardView import WhiteboardView
 
 class VideoSocket():
     def __init__(self, debug=False):
-        self.ip = '0.0.0.0'
+        self.ip = "0.0.0.0"
         self.ports = [4545,4546,4547,4548]
         self.debug = debug
         self.s = socket.socket() 
@@ -25,9 +25,10 @@ class VideoSocket():
                 if self.debug:
                     print('bound to port {}'.format(port))
                 return
-            except:
+            except Exception as e:
                 if self.debug:
                     print('failed to bind of port {}.'.format(port))
+                    print(e)
         self.s.close()
         raise SystemError('Failed to bind to all ports')                
 
