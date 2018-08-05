@@ -177,7 +177,7 @@ class Paint(object):
         self.currentSize = 0
 
         self.canvas = Canvas(self.root, bg='black')# , width=600, height=600)
-        self.canvas.pack(fill=BOTH, expand=YES, padx = 10, pady = 10)
+        self.canvas.pack(fill=BOTH, expand=YES, padx = 0, pady = 0)
         
         self.addCanvasButtons()
         self.root.config(background="dark blue")
@@ -193,6 +193,8 @@ class Paint(object):
             self.menubar = Menu(self.root)
         
             self.filemenu = Menu(self.menubar, tearoff=0)
+            self.filemenu.add_command(label="Recalibrate", command=self.recalibrate)
+            self.filemenu.add_separator()
             self.filemenu.add_command(label="Upload Picture", command=self.insertImage)
             self.filemenu.add_command(label="Save Picture", command=self.saveCanvasToFile)
             self.filemenu.add_separator()
@@ -213,6 +215,10 @@ class Paint(object):
             self.d = DrawSocket(self, debug=self.debug)
             threading.Thread(target = self.waitForMaster, args=[self.d] ).start()
 
+
+    def recalibrate(self):
+        if not self.w is None:
+            self.w.recalibrate()
 
     def fullClearCanvas(self):
         self.clearDrawing()
@@ -257,7 +263,7 @@ class Paint(object):
         if self.master:
             self.sendToSlave('calib,done')
         self.fullClearCanvas()
-        self.canvas.pack(fill=BOTH, expand=YES, padx=10, pady=10)
+        # self.canvas.pack(fill=BOTH, expand=YES, padx=0, pady=10)
         self.addCanvasButtons()
 
     def addCanvasButtons(self):
