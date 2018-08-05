@@ -232,7 +232,7 @@ class Paint(object):
             
         self.root.update()
         self.fullClearCanvas()
-        self.canvas.create_rectangle(10, self.canvas.winfo_height() - 110, 110, self.canvas.winfo_height() - 10, fill='white')
+        self.canvas.create_rectangle(10, self.canvas.winfo_height() - 110, 110, self.canvas.winfo_height() - 10, fill='dark blue')
         
     def calibSE(self):
         if self.master:
@@ -502,14 +502,16 @@ class Paint(object):
 
     # x and y are the normalized coordinates 
     def checkForButtonPress(self, x, y):
+        x = float(x)
+        y = float(y)
         # Pen button
         bx = self.penButtonX
         by = self.penButtonY
         bw = self.penButton.winfo_width()
         bh = self.penButton.winfo_height()
-        if normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
+        if self.normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
             # call the button press
-            usePen()
+            self.usePen()
             return True
         
         # Color button
@@ -517,19 +519,19 @@ class Paint(object):
         by = self.colorButtonY
         bw = self.colorButton.winfo_width()
         bh = self.colorButton.winfo_height()
-        if normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
+        if self.normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
             # call the button press
-            chooseColor()
+            self.chooseColor()
             return True
 
         # Erase button
-        bx = self.eraseButtonX
-        by = self.eraseButtonY
-        bw = self.eraseButton.winfo_width()
-        bh = self.eraseButton.winfo_height()
-        if normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
+        bx = self.eraserButtonX
+        by = self.eraserButtonY
+        bw = self.eraserButton.winfo_width()
+        bh = self.eraserButton.winfo_height()
+        if self.normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
             # call the button press
-            useEraser()
+            self.useEraser()
             return True
 
         # Erase button
@@ -537,9 +539,9 @@ class Paint(object):
         by = self.sizeButtonY
         bw = self.sizeButton.winfo_width()
         bh = self.sizeButton.winfo_height()
-        if normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
+        if self.normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
             # call the button press
-            changeSize()
+            self.changeSize()
             return True
 
         return False
@@ -547,8 +549,8 @@ class Paint(object):
     def normalizedPointInBox(self, nx, ny, x, y, x2, y2):
         # make sure canvas width/height are up to date 
         self.root.update()
-        w = canvas.winfo_width() 
-        h = canvas.winfo_height()
+        w = self.canvas.winfo_width() 
+        h = self.canvas.winfo_height()
         
         # normalize the point into the same variables
         x = float(x) / float(w) * 100.0
@@ -598,15 +600,15 @@ class Paint(object):
             splits = line.split(sep=',')
             if self.debug:
                 print('received calib')
-            if splits[1] is 'nw':
+            if splits[1] in 'nw':
                 self.calibNW()
-            elif splits[1] is 'ne':
+            elif splits[1] in 'ne':
                 self.calibNE()
-            elif splits[1] is 'sw':
+            elif splits[1] in 'sw':
                 self.calibSW()
-            elif splits[1] is 'se':
+            elif splits[1] in 'se':
                 self.calibSE()
-            elif splits[1] is 'done':
+            elif splits[1] in 'done':
                 self.doneCalib()
 
         elif self.prev is not None:
