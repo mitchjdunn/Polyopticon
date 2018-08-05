@@ -38,7 +38,8 @@ class VideoSocket():
         try:
             import picamera
         except:
-            print("No module picamera. Slave should be run on raspberry pi.")
+            if self.debug:
+                print("No module picamera. Slave should be run on raspberry pi.")
             self.s.close()
             return
         self.bind()
@@ -204,8 +205,6 @@ class Paint(object):
             d = DrawSocket(self, debug=self.debug)
             threading.Thread(target = self.waitForMaster, args=[d] ).start()
 
-            v = VideoSocket(debug=self.debug)
-            threading.Thread(target = v.sendImages).start()            
 
     def insert64image(self, base64string):
         fh = open('temp.png', 'wb')
@@ -323,6 +322,10 @@ class Paint(object):
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
         self.prev = None
+    
+        if not self.master:
+            v = VideoSocket(debug=self.debug)
+            threading.Thread(target = v.sendImages).start()            
         
     def usePen(self):
         self.eraserOn = False
@@ -487,4 +490,6 @@ class Paint(object):
 if __name__ == '__main__':
     print("Setting up tk")
     p = Paint(master=True, debug=True)
+    w = WhiteboardView(p, debug=True,prod=True)
+    threading.Thread(target=w.runVideoFromPath, args=('test1.h264',)).start()
     p.startLoop()
