@@ -1,3 +1,4 @@
+#!/usr/bin/env python3 
 from whiteboard import Paint
 if __name__ == '__main__':
     print("Setting up tk")

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3 
+
 from tkinter import *
 import io
 from tkinter.filedialog import askopenfilename, asksaveasfile
