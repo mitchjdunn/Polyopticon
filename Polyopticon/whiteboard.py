@@ -388,7 +388,7 @@ class Paint(object):
     def startLoop(self): 
         self.setup()
         self.root.update()
-        elf.canvas.create_rectangle(0, 0, 4000, 4000, fill='black')
+        self.canvas.create_rectangle(0, 0, 4000, 4000, fill='black')
         self.root.mainloop()
         
     def changeSize(self):
