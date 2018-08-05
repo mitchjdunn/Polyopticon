@@ -490,6 +490,6 @@ class Paint(object):
 if __name__ == '__main__':
     print("Setting up tk")
     p = Paint(master=True, debug=True)
-    w = WhiteboardView(p, debug=True,prod=True)
-    threading.Thread(target=w.runVideoFromPath, args=('test1.h264',)).start()
+    #w = WhiteboardView(p, debug=True,prod=True)
+    #threading.Thread(target=w.runVideoFromPath, args=('finaltest1.h264',)).start()
     p.startLoop()
