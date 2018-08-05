@@ -109,6 +109,7 @@ class DrawSocket(object):
                 data = data + client.recv(size)
                 if data is b'' or data.decode("utf-8").rstrip() is '':
                     if self.debug:
+                        self.connected = False
                         print("no data, client dead")
                     return 
 
@@ -225,6 +226,7 @@ class Paint(object):
         self.root.update()
         self.fullClearCanvas()
         self.canvas.create_rectangle(10, 10, 110, 110, fill='dark blue')
+        self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
 
     def calibSW(self):
         if self.master:
@@ -233,6 +235,7 @@ class Paint(object):
         self.root.update()
         self.fullClearCanvas()
         self.canvas.create_rectangle(10, self.canvas.winfo_height() - 110, 110, self.canvas.winfo_height() - 10, fill='dark blue')
+        self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
         
     def calibSE(self):
         if self.master:
@@ -240,6 +243,7 @@ class Paint(object):
         self.root.update()
         self.fullClearCanvas()
         self.canvas.create_rectangle( self.canvas.winfo_width() - 110, self.canvas.winfo_height() - 110, self.canvas.winfo_width() - 10, self.canvas.winfo_height() - 10, fill='dark blue')
+        self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
 
     def calibNE(self):
         if self.master:
@@ -247,6 +251,7 @@ class Paint(object):
         self.root.update()
         self.fullClearCanvas()
         self.canvas.create_rectangle(self.canvas.winfo_width() - 110, 10, self.canvas.winfo_width() - 10, 110, fill='dark blue')
+        self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
 
     def doneCalib(self):
         if self.master:
@@ -586,7 +591,11 @@ class Paint(object):
         elif line.startswith("color"):
             if self.debug:
                 print('got color')
-            self.setColor(int(line.split(sep=',')[1]))
+            color = line.split(sep=',')[1]
+            if 'black' in color:
+                self.useEraser()
+            else:
+                self.setColor(int(color))
         elif line.startswith("size"):
             if self.debug:
                 print('got size')
