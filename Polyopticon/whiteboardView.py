@@ -44,6 +44,7 @@ class WhiteboardView:
         self.calibrating = False
         self.readyMessageSent = False
         self.s = socket.socket()
+        self.video = False
         self.ports = [4545,4546,4547,4548]
         self.corners = 0
 
@@ -104,36 +105,46 @@ class WhiteboardView:
             if self.corners < 4:
                 img1 = cvHelper.colorSelect2(img.copy())
                 img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+
+                print('corner')
                 if self.corners ==0:
                     #topLeft, NW
+                     print('nw')
                     if not self.calibrating:
                         self.p.calibNW()
                         self.calibrating = True
                     if self.border.findCorner(img1, 'topleft'):
+                        print('found nw')
                         corners += 1
                         self.calibrating = False
                 elif self.corners == 1:
                     #topRight, NE
+                    print('ne')
                     if not self.calibrating:
                         self.p.calibNE()
                         self.calibrating = True
                     if self.border.findCorner(img1, 'topright'):
                         self.calibrating = False
+                        print('found ne')
                         corners += 1
                 elif self.corners == 2:
-                    #topRight, SW
+                    #bottomright, SW
+                    print('sw')
                     if not self.calibrating:
                         self.p.calibSW()
                         self.calibrating = True
                     if self.border.findCorner(img1, 'bottomleft'):
+                        print('found sw')
                         self.calibrating = False
                         corners += 1
                 elif self.corners == 3:
-                    #topRight, SW
+                    #bottomleft, SW
+                    print('se')
                     if not self.calibrating:
                         self.p.calibSE()
                         self.calibrating = True
-                    if self.border.findCorner(img1, 'bottomleft'):
+                    if self.border.findCorner(img1, 'bottomright'):
+                        print('found se')
                         self.calibrating = False
                         self.corners += 1
                         return True
@@ -251,6 +262,7 @@ class WhiteboardView:
     #video can be given via file path, camera port(as int), or via url
     #ex. /path/to/file, 0, tcp//@ip:port
     def runVideoFromPath(self, videoPath):
+        self.video = True
         if self.debug:
             print("runVideo({})".format(videoPath))
         cap = cv2.VideoCapture(videoPath)
