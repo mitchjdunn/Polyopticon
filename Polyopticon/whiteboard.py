@@ -178,6 +178,7 @@ class Paint(object):
         self.canvas.pack(fill=BOTH, expand=YES, padx = 10, pady = 10)
         
         self.addCanvasButtons()
+        self.root.config(background="white")
 
         self.history = ""
 
@@ -195,6 +196,16 @@ class Paint(object):
             self.filemenu.add_separator()
             self.filemenu.add_command(label="Exit", command=self.root.quit)
             self.menubar.add_cascade(label="File", menu=self.filemenu)
+            
+            if self.debug:
+                self.debugmenu = Menu(self.menubar, tearoff=0)
+                self.debugmenu.add_command(label="AddButtons", command=self.doneCalib)
+                self.debugmenu.add_command(label="calibNW", command=self.calibNW)
+                self.debugmenu.add_command(label="calibNE", command=self.calibNE)
+                self.debugmenu.add_command(label="calibSW", command=self.calibSW)
+                self.debugmenu.add_command(label="calibSE", command=self.calibSE)
+                self.menubar.add_cascade(label="Debug", menu=self.debugmenu)
+
             self.root.config(menu=self.menubar)
         else:
             self.d = DrawSocket(self, debug=self.debug)
@@ -202,15 +213,42 @@ class Paint(object):
 
 
     def fullClearCanvas(self):
+        self.clearDrawing()
         self.canvas.delete("all")
+        self.canvas.pack(fill=BOTH, expand=YES, padx=0, pady=0)
+    
+    def calibNW(self):
+        self.root.update()
+        self.fullClearCanvas()
+        self.canvas.create_rectangle(10, 10, 110, 110, fill='white')
+
+    def calibSW(self):
+        self.root.update()
+        self.fullClearCanvas()
+        self.canvas.create_rectangle(10, self.canvas.winfo_height() - 110, 110, self.canvas.winfo_height() - 10, fill='white')
+        
+    def calibSE(self):
+        self.root.update()
+        self.fullClearCanvas()
+        self.canvas.create_rectangle( self.canvas.winfo_width() - 110, self.canvas.winfo_height() - 110, self.canvas.winfo_width() - 10, self.canvas.winfo_height() - 10, fill='white')
+
+    def calibNE(self):
+        self.root.update()
+        self.fullClearCanvas()
+        self.canvas.create_rectangle(self.canvas.winfo_width() - 110, 10, self.canvas.winfo_width() - 10, 110, fill='white')
+
+    def doneCalib(self):
+        self.fullClearCanvas()
+        self.canvas.pack(fill=BOTH, expand=YES, padx=10, pady=10)
+        self.addCanvasButtons()
 
     def addCanvasButtons(self):
         self.penButton = Button(self.root, text='pen', command=self.usePen, bg="dark blue", fg = "white")
         self.penButton.configure(width = 10, height = 6, bd=0) 
         self.canvas.create_window(10, 10, anchor=NW, window=self.penButton)
 
-        self.colorButton = Button(self.root, text='color', command=self.chooseColor, bg="dark blue", fg = "white")
-        # self.colorButton = Button(self.root, text='color', command=self.fullClearCanvas, bg="dark blue", fg = "white")
+        # self.colorButton = Button(self.root, text='color', command=self.chooseColor, bg="dark blue", fg = "white")
+        self.colorButton = Button(self.root, text='color', command=self.fullClearCanvas, bg="dark blue", fg = "white")
         self.colorButton.configure(width = 10, height = 6, bd = 0) 
         self.canvas.create_window(10, 90, anchor=NW, window=self.colorButton)
 
@@ -439,7 +477,8 @@ class Paint(object):
 
     def clearDrawing(self):
         self.root.update()
-        self.canvas.create_rectangle(0, 0, self.canvas.winfo_width, self.canvas.winfo_height, fill='black')
+        self.canvas.create_rectangle(0, 0, self.canvas.winfo_width(), self.canvas.winfo_height(), fill='black')
+
     def handle(self, line):
         if line.rstrip() is '':
             return
