@@ -502,7 +502,7 @@ class Paint(object):
         #start image recognition
         self.w = WhiteboardView(self, debug=self.debug, prod=True)
 
-        threading.Thread(target=w.runVideo).start()
+        threading.Thread(target=self.w.runVideo).start()
 #        sleep(0.001)
 #        self.sendToSlave("color,{}".format(self.color))
 #        self.sendToSlave("size,{}".format(self.lineWidth))
@@ -512,7 +512,7 @@ if __name__ == '__main__':
     try:
         p = Paint(master=True, debug=True)
         w = WhiteboardView(p, debug=True,prod=True)
-        threading.Thread(target=w.runVideoFromPath, args=('test1.h264',)).start()
+        threading.Thread(target=w.runVideoFromPath, args=('test5.h264',)).start()
         p.startLoop()
     finally:
         p.close()
