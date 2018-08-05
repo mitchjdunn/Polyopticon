@@ -193,6 +193,7 @@ class Paint(object):
             self.menubar = Menu(self.root)
         
             self.filemenu = Menu(self.menubar, tearoff=0)
+            self.filemenu.add_command(label="Clear Board", command=self.clearDrawing)
             self.filemenu.add_command(label="Recalibrate", command=self.recalibrate)
             self.filemenu.add_separator()
             self.filemenu.add_command(label="Upload Picture", command=self.insertImage)
@@ -573,7 +574,7 @@ class Paint(object):
         
     def clearDrawing(self):
         self.root.update()
-        self.canvas.create_rectangle(0, 0, self.canvas.winfo_width(), self.canvas.winfo_height(), fill='black')
+        self.canvas.create_rectangle(0, 0, 4000, 4000, fill='black')
 
     def handle(self, line):
         if line.rstrip() is '':
