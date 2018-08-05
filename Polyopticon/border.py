@@ -7,8 +7,10 @@ from shapely.geometry.polygon import Polygon
 import collections
 class Border:
 
-    def __init__(self):
-        self.debug = False
+    def __init__(self, debug =False):
+        self.debug = debug
+        if self.debug:
+            print('Border init')
         #Final variables
         #minimum amount of times a rectangle is found before it becomes the border
             
@@ -26,31 +28,53 @@ class Border:
         self.bottomLeft = []
         #list of coordinates for corners of rectangle. counted for assurance 
         self.potentialBorder = collections.Counter()
+        self.minBorderThreshold = 10
 
     def findBorder(self, img):
-        minBorderThreshold = 10
+        if self.debug:
+            print('border.findBorder')
+
+        #cv contour specifics
         modes=[cv2.RETR_EXTERNAL, cv2.RETR_LIST, cv2.RETR_CCOMP, cv2.RETR_TREE, cv2.RETR_FLOODFILL]
         methods=[cv2.CHAIN_APPROX_NONE, cv2.CHAIN_APPROX_SIMPLE]
-        #manage contours somehow??
-        _,contours,_ = cv2.findContours(img,modes[3], methods[0])
+        _,contours,_ = cv2.findContours(img,modes[0], methods[0])
+
+        if not contours:
+            if self.debug:
+                print('not enough contours')
+            return
+
+        #sort contours largest to small
+        contours = sorted(contours, key=lambda x: cv2.arcLength(x, False), reverse=True)
+
+
+        
+        #Smallest rectangle containing the largest contour
         rect = cv2.minAreaRect(contours[0])
         if rect is None:
             if self.debug:
                 print("no rectangle")
             return
+        #set of points
         box = cv2.boxPoints(rect)
-        box = tuple([tuple([int(x), int(y)]) for x,y in box])
+        #set of points rounded to the nearest 5 to remove slight variance
+        box = tuple([tuple([int(x) - int(x) % 2, int(y) - int(y) % 2]) for x,y in box])
         if self.debug:
             print(box, "Box")
+            #img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
+            #img1 = cv2.drawContours(img1, [np.int0(box)], 0,(0,0,255),2)
+            #cv2.imshow('potentialBox', img1)
         width, height = img.shape[:2]
+        #checking size of contour --- if it's two small it wont be accepted
         if (abs(box[0][0] - box[1][0]) > width / 4 or abs(box[0][0] - box[2][0]) > width/4) and (abs(box[0][1] - box[1][1]) > height/4 or abs(box[0][1] - box[2][1]) > height/4):
             self.potentialBorder.update((box,))
         if self.debug:
             print(self.potentialBorder)
         if len(self.potentialBorder) == 0:
             return 
+        #Set the border if it has more than 10 counts
         border = self.potentialBorder.most_common(1)[0]
-        if  border[1] >= minBorderThreshold:
+        if  border[1] >= self.minBorderThreshold:
             self.setBorder(border[0])
 
 #    def borderFound(self):
@@ -67,19 +91,22 @@ class Border:
         self.borderboundries = border
         self.borderFound = True
         if self.debug:
-            print("border")
-            print(border)
-        self.topLeft = sorted(sorted(border)[:2], key = lambda x : x[1])[0]
+            print("setborder({})".format(border))
+        #get points of rectangle
+        self.topLeft = sorted(sorted(border)[:2], key = lambda x : x[1] )[0]
         self.topRight = sorted(sorted(border)[2:], key = lambda x : x[1])[0]
-        self.bottomLeft  = sorted(sorted(border)[:2], key = lambda x : x [1])[1]
+        self.bottomLeft  = sorted(sorted(border)[:2], key = lambda x : x[1])[1]
+        #get width height and slope for cornter points
         self.width = math.sqrt((self.topRight[1] - self.topLeft[1])**2 + (self.topRight[0] - self.topLeft[0])**2)
         self.height = math.sqrt((self.bottomLeft[1] - self.topLeft[1])**2 + (self.bottomLeft[0] - self.topLeft[0])**2)
+        #rise over run baby
         self.slope = (self.topRight[1] - self.topLeft[1]) / (self.topRight[0] - self.topLeft[0])
 
     def getPositionOfPoint(self, point):
         #relative x position is intersect formula for line with a perpendicular slope
         a = np.array([[1, -1/self.slope], [1, -self.slope]]) 
         b = np.array([point[1] - (1/self.slope) * point[0] ,self.topLeft[1] - (self.slope * self.topLeft[0])])
+        #X is equal to the x position of the intersect of the top line and a line from point with a slope perpendicular to the top line.
         xPos = np.linalg.solve(a,b)[1]
         if self.debug:
             print(np.linalg.solve(a,b))

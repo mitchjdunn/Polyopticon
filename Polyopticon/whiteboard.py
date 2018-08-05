@@ -18,6 +18,9 @@ class VideoSocket():
         self.ports = [4545,4546,4547,4548]
         self.debug = debug
         self.s = socket.socket() 
+
+    def close(self):
+        self.s.close()
     def bind(self):
         for port in self.ports:
             try:
@@ -30,15 +33,17 @@ class VideoSocket():
                     print('failed to bind of port {}.'.format(port))
                     print(e)
         self.s.close()
-        raise SystemError('Failed to bind to all ports')                
+        if self.debug:
+            print('Failed to bind to all ports')                
 
     
     def sendImages(self):
         try:
             import picamera
         except:
-            raise SystemError("No module picamera. Slave should be run on raspberry pi.")
-            self.s.close()
+            if self.debug:
+                print("No module picamera. Slave should be run on raspberry pi.")
+            self.close()
             return
         self.bind()
         self.s.listen(0)
@@ -48,7 +53,7 @@ class VideoSocket():
             camera = picamera.PiCamera(framerate = 30)
             camera.resolution = (1280,720)
             camera.rotation =270
-            #camera.exposure_mode = 'spotlight'
+            camera.exposure_mode = 'spotlight'
             while True:
                 stream = io.BytesIO()
                 for _ in camera.capture_continuous(stream, 'jpeg', use_video_port = True):
@@ -78,6 +83,9 @@ class DrawSocket(object):
         # listen for clients in another thread
         threading.Thread(target = self.listen).start()
         # self.listen()
+    
+    def close(self):
+        self.serverSocket.close()
 
     # Accepts new sockets from server socket
     def listen(self):
@@ -146,6 +154,8 @@ class BroadcastListener(object):
                 print("received message: %s, from: %s"%(data, addr))
             if 'whiteboard' in data.decode("utf-8"):
                 self.paint.addSlave(addr[0])
+    def close(self):
+        self.client.close()
 
 class Paint(object):
 
@@ -171,10 +181,11 @@ class Paint(object):
 
         self.history = ""
 
+        self.w = None
         if self.debug:
             print("setting up socket")
         if master: 
-            BroadcastListener(self, debug=self.debug) 
+            self.broadcast = BroadcastListener(self, debug=self.debug) 
 
             self.menubar = Menu(self.root)
         
@@ -186,11 +197,9 @@ class Paint(object):
             self.menubar.add_cascade(label="File", menu=self.filemenu)
             self.root.config(menu=self.menubar)
         else:
-            d = DrawSocket(self, debug=self.debug)
-            threading.Thread(target = self.waitForMaster, args=[d] ).start()
+            self.d = DrawSocket(self, debug=self.debug)
+            threading.Thread(target = self.waitForMaster, args=[self.d] ).start()
 
-            v = VideoSocket(debug=self.debug)
-            threading.Thread(target = v.sendImages).start()            
 
     def fullClearCanvas(self):
         self.canvas.delete("all")
@@ -311,6 +320,17 @@ class Paint(object):
                     return
                 
             
+    def close(self):
+        if self.master:
+            self.broadcast.close()
+            try:
+                self.w.close()
+            except:
+                pass
+        else:
+            self.d.close()
+            self.v.close()
+        
     def startLoop(self): 
         self.setup()
         self.root.mainloop()
@@ -329,6 +349,10 @@ class Paint(object):
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
         self.prev = None
+    
+        if not self.master:
+            self.v = VideoSocket(debug=self.debug)
+            threading.Thread(target = self.v.sendImages).start()            
         
     def usePen(self):
         self.eraserOn = False
@@ -483,7 +507,7 @@ class Paint(object):
         # make sure slave gets the write pen type off the bat
         threading.Thread(target = self.slaveSendThread, args = [slavesocket]).start()
         #start image recognition
-        w = WhiteboardView(self, debug=self.debug, prod=True)
+        self.w = WhiteboardView(self, debug=self.debug, prod=True)
 
         threading.Thread(target=w.runVideo).start()
 #        sleep(0.001)
@@ -492,5 +516,11 @@ class Paint(object):
 
 if __name__ == '__main__':
     print("Setting up tk")
-    p = Paint(master=True, debug=True)
-    p.startLoop()
+    try:
+        p = Paint(master=True, debug=True)
+        w = WhiteboardView(p, debug=True,prod=True)
+        threading.Thread(target=w.runVideoFromPath, args=('test1.h264',)).start()
+        p.startLoop()
+    finally:
+        p.close()
+        w.close()

@@ -10,12 +10,23 @@ from border import Border
 
 class cvHelper:
 
-    def colorSelect2(img):
+    def colorSelect(img):
          hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-         lower_white = np.array([0,0,200])
-         upper_white = np.array([240,80,255])
+         lower_white = np.array([0,0,230])
+         upper_white = np.array([255,25,255])
          mask = cv2.inRange(hsv, lower_white, upper_white)
          return cv2.bitwise_and(img,img, mask= mask)
+    def colorSelect2(img):
+         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+         lower_white = np.array([0,0,170])
+         upper_white = np.array([255,85,255])
+         mask = cv2.inRange(hsv, lower_white, upper_white)
+         return cv2.bitwise_and(img,img, mask= mask)
+    def addEdges(img):
+        edges = cv2.Canny(img,80,40)
+        img = cv2.addWeighted(img, .7, edges, .3,0)
+        return img
+
 
 class WhiteboardView:
 
@@ -61,42 +72,58 @@ class WhiteboardView:
         self.p.handle(str(pos[0]) +','+str(pos[1]))
         #draw
 
-    def nextFrame(self, img):
-        if self.debug:
-            print("next Frame")
-            cv2.imshow('original Image', img)
-            cv2.waitKey(1)
+    def sendTouch(self, LED):
+        LEDx, LEDy = LED
+        if self.penDown:
+            #checking distance between pen strokes -- don't want misfires to draw lines
+            if self.lastPen is not None:
+                if abs(self.lastPen[0] - LEDx) > 25 or abs(self.lastPen[1] - LEDy) > 25:
+                    self.up()
+                    self.down((LEDx, LEDy))
+            self.newLEDPos((LEDx,LEDy))
+        else:
+            self.down((LEDx, LEDy))
+
+    def borderCheck(self,img):
         #CHECKING FOR BORDER
+        if self.debug:
+            print('borderCheck')
         if self.border is None:
-            self.border = Border()
+            self.border = Border(debug=self.debug)
             if self.prod:
                 pass
                 #TODO handle calibration
                 #self.send('calibrating')
+        #TODO manage movement??
         if not self.border.borderFound:
             #CHANGE IMG BEFORE FINDBORDER
             img1 = cvHelper.colorSelect2(img.copy())
             img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
             self.border.findBorder(img1)
+            return False
+        return True
 
-            if self.debug:
-                print(self.border.potentialBorder)
+    def nextFrame(self, img):
+        if self.debug:
+            print("next Frame")
+            cv2.waitKey(1)
+
+        #checks if border exists.  If it hasn't continue to look for it
+        if not self.borderCheck(img):
             return
-
         if not self.readyMessageSent and self.prod:
             self.readyMessageSent = True
             #TODO handle ready message
             #self.send('ready')
             
-        if self.debug:
         #SHOW BORDER
+        if self.debug:
             box = np.int0(self.border.borderboundries)
             img2 = img.copy()
             img2 = cv2.drawContours(img2, [box], 0,(0,0,255), 2)
         
         #CHECKING FOR LED
-        #img1 = WhiteboardView.colorSelect(img.copy())
-        img1 = cvHelper.colorSelect2(img.copy())
+        img1 = cvHelper.colorSelect(img.copy())
         img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         LED = self.detectLED(img1)
         if LED is not None:
@@ -105,15 +132,7 @@ class WhiteboardView:
                 img2 = cv2.circle(img2, LED, 5, (0,255,0), 2)
                 print((LEDx, LEDy))
             if self.prod:
-                if self.penDown:
-                    #checking distance between pen strokes -- don't want misfires to draw lines
-                    if self.lastPen is not None:
-                        if abs(self.lastPen[0] - LEDx) > 5 or abs(self.lastPen[1] - LEDy) > 5:
-                            self.up()
-                            self.down((LEDx, LEDy))
-                    self.newLEDPos((LEDx,LEDy))
-                else:
-                    self.down((LEDx, LEDy))
+                self.sendTouch((LEDx,LEDy))
         else:
             if self.debug:
                 print('No LED')
@@ -141,7 +160,6 @@ class WhiteboardView:
                     #assume network issues for no imLen
                     #TODO
                     imLen = struct.unpack('<L', connection.read(struct.calcsize('<L')))[0]
-            
                 if self.debug:
                     print('imLen: {}'.format(imLen))
 
@@ -150,9 +168,11 @@ class WhiteboardView:
                 #data is the image recieved from the stream converted for opencv
                 data = np.fromstring(stream.getvalue(), dtype=np.uint8)
                 img = cv2.imdecode(data,1)
+                cv2.imshow('original', img)
                 self.nextFrame(img) 
-            except:
-                print('Error while recieving images via socket')        
+            except Exception as e:
+                print("Socket Error: whiteboardView.whiteboardView.runVideo")
+                print(e)
                 
     #this is mostly for testing. can break video frame by frame
     #video can be given via file path, camera port(as int), or via url
@@ -167,46 +187,46 @@ class WhiteboardView:
             print("no video")
         while ret:
             self.nextFrame(img)
-            print("hiya")
-            cv2.waitKey(1)
+            if self.debug:
+                cv2.waitKey(1)
+                cv2.imshow('original', img)
             ret, img = cap.read()
 
     def detectLED(self, img):
-
+        #cv modes and methods
         modes=[cv2.RETR_EXTERNAL, cv2.RETR_LIST, cv2.RETR_CCOMP, cv2.RETR_TREE, cv2.RETR_FLOODFILL]
         methods=[cv2.CHAIN_APPROX_NONE, cv2.CHAIN_APPROX_SIMPLE]
-        #manage contours somehow??
-        _,contours,_ = cv2.findContours(img,modes[1], methods[0])
-        rect = cv2.minAreaRect(contours[0])
-        box = cv2.boxPoints(rect)
-        box = tuple([tuple(x) for x in box])
-        if self.debug:
-            print('og box: ', box)
-        topRight = sorted(sorted(box)[2:], key = lambda x : x[1])[0]
-        bottomLeft  = sorted(sorted(box)[:2], key = lambda x : x [1])[1]
-        if self.debug:
-            print('new box', box)
-        #find cener of box
-        x,y = (int((topRight[0] + bottomLeft[0]) / 2),int((topRight[1] + bottomLeft[1]) / 2))
-        if self.border.inBorder((x,y)):
-            return (int((topRight[0] + bottomLeft[0]) / 2),int((topRight[1] + bottomLeft[1]) / 2))
+        #contours from image
+        _,contours,_ = cv2.findContours(img,modes[0], methods[1])
+        #sorted by smalles perimeters first
+        contours = sorted(contours, key=lambda x: cv2.arcLength(x, True))
+        print(len(contours)) 
+    
+        #cycle through contours to find LED
+        for c in contours:
+            #weed out contours that are too large or too small
+            if cv2.arcLength(c, False) < 15 or cv2.arcLength(c, True) > 50:
+                continue
+            #smallest circle closing the contour
+            (x,y),_ = cv2.minEnclosingCircle(c)
+            x = int(x)
+            y = int(y)
+            #remove
+            #return first in circle. 
+            #TODO get more specific?
+            if self.border.inBorder((x,y)):
+                return (x,y)
         return None
 
+    def close(self):
+        self.s.close()
+        cv2.DestroyAllWindows()
+        
 def main():
-    p = Paint(master = True, debug=True)
-    #Get host from network discovery.
-    while not p.slaveAttached:
-        print("slave not found")
-        sleep(1)
-    try:
-        w = WhiteboardView(p, debug=True, prod=True)
-        #w.connect()
-        #threading.Thread(target=w.runVideo).start() 
-    except:
-        print("is kill")
-    
-    p.startLoop()
-    #w.runVideo("udp://@" + host + ":" + port)
+    from whiteboard import Paint
+    p = Paint()
+    w = WhiteboardView(p, debug=True)
+    w.runVideoFromPath("test1.h264")
 
 if __name__ == '__main__':
     main()
