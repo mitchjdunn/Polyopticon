@@ -30,14 +30,15 @@ class VideoSocket():
                     print('failed to bind of port {}.'.format(port))
                     print(e)
         self.s.close()
-        raise SystemError('Failed to bind to all ports')                
+        if self.debug:
+            print('Failed to bind to all ports')                
 
     
     def sendImages(self):
         try:
             import picamera
         except:
-            raise SystemError("No module picamera. Slave should be run on raspberry pi.")
+            print("No module picamera. Slave should be run on raspberry pi.")
             self.s.close()
             return
         self.bind()

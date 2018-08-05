@@ -12,10 +12,15 @@ class cvHelper:
 
     def colorSelect2(img):
          hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-         lower_white = np.array([0,0,200])
-         upper_white = np.array([240,80,255])
+         lower_white = np.array([0,0,170])
+         upper_white = np.array([255,85,255])
          mask = cv2.inRange(hsv, lower_white, upper_white)
          return cv2.bitwise_and(img,img, mask= mask)
+    def addEdges(img):
+        edges = cv2.Canny(img,80,40)
+        img = cv2.addWeighted(img, .7, edges, .3,0)
+        return img
+
 
 class WhiteboardView:
 
@@ -64,11 +69,10 @@ class WhiteboardView:
     def nextFrame(self, img):
         if self.debug:
             print("next Frame")
-            cv2.imshow('original Image', img)
             cv2.waitKey(1)
         #CHECKING FOR BORDER
         if self.border is None:
-            self.border = Border()
+            self.border = Border(debug=self.debug)
             if self.prod:
                 pass
                 #TODO handle calibration
@@ -77,11 +81,18 @@ class WhiteboardView:
             #CHANGE IMG BEFORE FINDBORDER
             img1 = cvHelper.colorSelect2(img.copy())
             img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-            cv2.imshow('border', img1)
+            #img1 = cvHelper.addEdges(img1)
+            cv2.imshow('findborder', img1)
             self.border.findBorder(img1)
 
             if self.debug:
                 print(self.border.potentialBorder)
+                try:
+                    img1 = img.copy()
+                    img1 = cv2.drawContours(img1, [np.int0(self.border.potentialBorder.most_common(1)[0])], 0,(0,0,255),2)
+                    cv2.imshow('most common border', img1)
+                except:
+                    pass
             return
 
         if not self.readyMessageSent and self.prod:
@@ -142,7 +153,6 @@ class WhiteboardView:
                     #assume network issues for no imLen
                     #TODO
                     imLen = struct.unpack('<L', connection.read(struct.calcsize('<L')))[0]
-            
                 if self.debug:
                     print('imLen: {}'.format(imLen))
 
@@ -151,9 +161,11 @@ class WhiteboardView:
                 #data is the image recieved from the stream converted for opencv
                 data = np.fromstring(stream.getvalue(), dtype=np.uint8)
                 img = cv2.imdecode(data,1)
+                cv2.imshow('original', img)
                 self.nextFrame(img) 
-            except:
-                print('Error while recieving images via socket')        
+            except Exception as e:
+                print("Socket Error: whiteboardView.whiteboardView.runVideo")
+                print(e)
                 
     #this is mostly for testing. can break video frame by frame
     #video can be given via file path, camera port(as int), or via url
@@ -168,8 +180,9 @@ class WhiteboardView:
             print("no video")
         while ret:
             self.nextFrame(img)
-            print("hiya")
-            cv2.waitKey(1)
+            if self.debug:
+                cv2.waitKey(0)
+                cv2.imshow('original', img)
             ret, img = cap.read()
 
     def detectLED(self, img):
@@ -194,20 +207,10 @@ class WhiteboardView:
         return None
 
 def main():
-    p = Paint(master = True, debug=True)
-    #Get host from network discovery.
-    while not p.slaveAttached:
-        print("slave not found")
-        sleep(1)
-    try:
-        w = WhiteboardView(p, debug=True, prod=True)
-        #w.connect()
-        #threading.Thread(target=w.runVideo).start() 
-    except:
-        print("is kill")
-    
-    p.startLoop()
-    #w.runVideo("udp://@" + host + ":" + port)
+    from whiteboard import Paint
+    p = Paint()
+    w = WhiteboardView(p, debug=True)
+    w.runVideoFromPath("demotest.mp4")
 
 if __name__ == '__main__':
     main()

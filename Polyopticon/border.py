@@ -7,8 +7,10 @@ from shapely.geometry.polygon import Polygon
 import collections
 class Border:
 
-    def __init__(self):
-        self.debug = False
+    def __init__(self, debug =False):
+        self.debug = debug
+        if self.debug:
+            print('Border init')
         #Final variables
         #minimum amount of times a rectangle is found before it becomes the border
             
@@ -28,11 +30,29 @@ class Border:
         self.potentialBorder = collections.Counter()
 
     def findBorder(self, img):
+        if self.debug:
+            print('border.findBorder')
         minBorderThreshold = 10
+
         modes=[cv2.RETR_EXTERNAL, cv2.RETR_LIST, cv2.RETR_CCOMP, cv2.RETR_TREE, cv2.RETR_FLOODFILL]
         methods=[cv2.CHAIN_APPROX_NONE, cv2.CHAIN_APPROX_SIMPLE]
-        #manage contours somehow??
-        _,contours,_ = cv2.findContours(img,modes[3], methods[0])
+        _,contours,_ = cv2.findContours(img,modes[0], methods[0])
+        if not contours:
+            if self.debug:
+                print('not enough contours')
+            return
+
+        print(len(contours))
+        contours = sorted(contours, key=lambda x: cv2.arcLength(x, False), reverse=True)
+
+        #TODO remove
+        if self.debug:
+            img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
+            img1 = cv2.drawContours(img1, [contours[0]], 0,(0,0,255),2)
+            cv2.imshow('Contour', img1)
+            print(contours[0])
+
+        
         rect = cv2.minAreaRect(contours[0])
         if rect is None:
             if self.debug:
@@ -42,6 +62,9 @@ class Border:
         box = tuple([tuple([int(x), int(y)]) for x,y in box])
         if self.debug:
             print(box, "Box")
+            #img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
+            #img1 = cv2.drawContours(img1, [np.int0(box)], 0,(0,0,255),2)
+            #cv2.imshow('potentialBox', img1)
         width, height = img.shape[:2]
         if (abs(box[0][0] - box[1][0]) > width / 4 or abs(box[0][0] - box[2][0]) > width/4) and (abs(box[0][1] - box[1][1]) > height/4 or abs(box[0][1] - box[2][1]) > height/4):
             self.potentialBorder.update((box,))
