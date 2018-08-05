@@ -163,7 +163,7 @@ class Paint(object):
         self.colors = ['red', 'blue', 'white', 'green', 'purple', 'orange']
 
         self.canvas = Canvas(self.root, bg='black')# , width=600, height=600)
-        self.canvas.pack(fill=BOTH, expand=YES, padx = 5, pady = 5)
+        self.canvas.pack(fill=BOTH, expand=YES, padx = 10, pady = 10)
 
         self.penButton = Button(self.root, text='pen', command=self.usePen, bg="dark blue", fg = "white")
         self.penButton.configure(width = 10, height = 6, bd=0) 
