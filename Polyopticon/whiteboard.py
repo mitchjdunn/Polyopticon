@@ -386,8 +386,6 @@ class Paint(object):
             while currentPos < len(self.sendQueue):
                 try: 
                     line = self.sendQueue[currentPos]
-                    if self.debug:
-                        print("SEND {}".format(line))
                     socket.send(line)
                     currentPos = currentPos + 1
                 except Exception as e:
@@ -573,6 +571,8 @@ class Paint(object):
         return nx > x and nx < x2 and ny > y and ny < y2 
         
     def clearDrawing(self):
+        if self.master:
+            self.sendToSlave('clear')
         self.root.update()
         self.canvas.create_rectangle(0, 0, 4000, 4000, fill='black')
 
@@ -590,11 +590,13 @@ class Paint(object):
             coords = line.split(sep=',')
             if not self.checkForButtonPress(coords[1], coords[2]):
                 self.prev = (coords[1], coords[2])
+
         elif line.startswith("up"):
             if self.debug:
                 print('got up')
             coords = line.split(sep=',')
             self.prev = None
+
         elif line.startswith("color"):
             if self.debug:
                 print('got color')
@@ -603,15 +605,20 @@ class Paint(object):
                 self.useEraser()
             else:
                 self.setColor(int(color))
+
         elif line.startswith("size"):
             if self.debug:
                 print('got size')
             self.setSize(line.split(sep=',')[1])
+
         elif line.startswith("image"):
             if self.debug:
                 print('received image')
             b64str = line.split(sep=',')[1]
             self.insert64image(b64str)
+
+        elif line.startswith('clear'):
+            self.clearDrawing()
         elif line.startswith('calib'):
             splits = line.split(sep=',')
             if self.debug:
@@ -646,7 +653,6 @@ class Paint(object):
 
     def sendToSlave(self, line): 
         line = line.rstrip() + '\n'
-        # print("SEND {}".format(line))
         self.sendQueue.append(str.encode(line))
 
     # only single slave supported rn
