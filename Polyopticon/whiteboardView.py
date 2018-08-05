@@ -251,6 +251,9 @@ class WhiteboardView:
             if self.border.inBorder((x,y)):
                 return (x,y)
         return None
+
+    def recalibrate(self):
+        self.border=Border(debug = self.debug)
     #this method reads images sent over a socket via the slave whiteboard.
 
     def runVideo(self):
