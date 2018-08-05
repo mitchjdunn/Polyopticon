@@ -1,5 +1,7 @@
 camView/tests/*
 camView/cvHelper.py
+*.h264
+*./mp4
 *.png
 *.jpg
 *.mp4
