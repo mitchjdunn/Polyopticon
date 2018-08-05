@@ -109,7 +109,7 @@ class WhiteboardView:
                 print('corner')
                 if self.corners ==0:
                     #topLeft, NW
-                     print('nw')
+                    print('nw')
                     if not self.calibrating:
                         self.p.calibNW()
                         self.calibrating = True
