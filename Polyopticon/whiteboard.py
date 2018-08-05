@@ -414,7 +414,7 @@ class Paint(object):
         
     def changeSize(self):
         self.currentSize = (self.currentSize + 1) % len(self.sizes)
-        self.sizeButton.configure(text="Size (%d)"%self.sizes[self.currentSize])
+        self.sizeButton.configure(text="Size ({})".format(self.sizes[self.currentSize]))
         self.sendToSlave('size,{}'.format(self.sizes[self.currentSize]))
 
     def setup(self):
