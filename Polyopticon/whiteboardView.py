@@ -20,9 +20,10 @@ class cvHelper:
     #color select blue
     def colorSelect2(img):
          hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-         lower_blue = np.array([110,100,100])
+         lower_blue = np.array([80,80,180])
          upper_blue = np.array([130,255,255])
          mask = cv2.inRange(hsv, lower_blue, upper_blue)
+         cv2.imshow('colorSelect2', cv2.bitwise_and(img,img, mask= mask))
          return cv2.bitwise_and(img,img, mask= mask)
     def addEdges(img):
         edges = cv2.Canny(img,80,40)
@@ -95,90 +96,80 @@ class WhiteboardView:
 
     def borderCheck(self,img):
         #CHECKING FOR BORDER
-        if not self.video:
-            if self.debug:
-                print('borderCheck')
-            if self.border is None:
-                self.border = Border(debug=self.debug)
-                if self.prod:
-                    pass
-            if self.corners < 4:
-                img1 = cvHelper.colorSelect2(img.copy())
-                img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+        if self.debug:
+            print('borderCheck')
+        if self.border is None:
+            self.border = Border(debug=self.debug)
+            if self.prod:
+                pass
+        if self.corners < 4:
+            img1 = cvHelper.colorSelect2(img.copy())
+            img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
 
-                print('corner')
-                if self.corners ==0:
-                    #topLeft, NW
-                    print('nw')
-                    if not self.calibrating:
-                        self.p.calibNW()
-                        self.calibrating = True
+            print('corner')
+            if self.corners ==0:
+                #topLeft, NW
+                print('nw')
+                if not self.calibrating:
+                    self.p.calibNW()
+                    self.calibrating = True
+                    self.framesToSkip = 5
+                if self.framesToSkip == 0:
+                    if self.border.findCorner(img1, 'topleft'):
+                        print('found nw')
+                        self.corners += 1
+                        self.calibrating = False
                         self.framesToSkip = 5
-                    if self.framesToSkip == 0:
-                        if self.border.findCorner(img1, 'topleft'):
-                            print('found nw')
-                            self.corners += 1
-                            self.calibrating = False
-                            self.framesToSkip = 5
-                    else:
-                        self.framesToSkip -=1
-                elif self.corners == 1:
-                    #topRight, NE
-                    print('ne')
-                    if not self.calibrating:
-                        self.p.calibNE()
-                        self.calibrating = True
+                else:
+                    self.framesToSkip -=1
+            elif self.corners == 1:
+                #topRight, NE
+                print('ne')
+                if not self.calibrating:
+                    self.p.calibNE()
+                    self.calibrating = True
+                    self.framesToSkip = 5
+                if self.framesToSkip == 0:
+                    if self.border.findCorner(img1, 'topright'):
+                        self.calibrating = False
+                        print('found ne')
+                        self.corners += 1
                         self.framesToSkip = 5
-                    if self.framesToSkip == 0:
-                        if self.border.findCorner(img1, 'topright'):
-                            self.calibrating = False
-                            print('found ne')
-                            self.corners += 1
-                            self.framesToSkip = 5
-                    else:
-                        self.framesToSkip -=1
-                elif self.corners == 2:
-                    #bottomleft, SW
-                    print('sw')
-                    if not self.calibrating:
-                        self.p.calibSW()
-                        self.calibrating = True
-                        self.framesToSkip = 5
-                    if self.framesToSkip == 0:
-                        if self.border.findCorner(img1, 'bottomleft'):
-                            print('found sw')
-                            self.calibrating = False
-                            self.corners += 1
-                    else:
-                        self.framesToSkip -=1
-                elif self.corners == 3:
-                    #bottomright, SE
-                    print('se')
-                    if not self.calibrating:
-                        self.p.calibSE()
-                        self.calibrating = True
-                        self.framesToSkip = 5
-                    if self.framesToSkip == 0:
-                        if self.border.findCorner(img1, 'bottomright'):
-                            print('found se')
-                            self.calibrating = False
-                            self.corners += 1
-                            self.p.doneCalib()
-                    else:
-                        self.framesToSkip -= 1
-                return False
-            else:
-                if self.debug:
-                    print('not checking for border')
-                return True
+                else:
+                    self.framesToSkip -=1
+            elif self.corners == 2:
+                #bottomleft, SW
+                print('sw')
+                if not self.calibrating:
+                    self.p.calibSW()
+                    self.calibrating = True
+                    self.framesToSkip = 5
+                if self.framesToSkip == 0:
+                    if self.border.findCorner(img1, 'bottomleft'):
+                        print('found sw')
+                        self.calibrating = False
+                        self.corners += 1
+                else:
+                    self.framesToSkip -=1
+            elif self.corners == 3:
+                #bottomright, SE
+                print('se')
+                if not self.calibrating:
+                    self.p.calibSE()
+                    self.calibrating = True
+                    self.framesToSkip = 5
+                if self.framesToSkip == 0:
+                    if self.border.findCorner(img1, 'bottomright'):
+                        print('found se')
+                        self.calibrating = False
+                        self.corners += 1
+                        self.p.doneCalib()
+                else:
+                    self.framesToSkip -= 1
         else:
-            #TODO manage movement??
-            if not self.border.borderFound:
-                #CHANGE IMG BEFORE FINDBORDER
-                img1 = cvHelper.colorSelect2(img.copy())
-                img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-                self.border.findBorder(img1)
-                return False
+            if self.debug:
+                print('not checking for border')
+            return True
 
     def nextFrame(self, img):
         if self.debug:
@@ -194,7 +185,6 @@ class WhiteboardView:
             box = np.int0(self.border.borderboundries)
             img2 = img.copy()
             img2 = cv2.drawContours(img2, [box], 0, (255,0,255) ,2)
-            cv2.imshow('border', img2)
         
         #CHECKING FOR LED
         img1 = cvHelper.colorSelect(img.copy())
@@ -217,7 +207,6 @@ class WhiteboardView:
                         self.up()
 
         if self.debug:
-            cv2.imshow('img', img)
             cv2.imshow('img2', img2)
 
     def detectLED(self, img):
@@ -227,7 +216,7 @@ class WhiteboardView:
         #contours from image
         _,contours,_ = cv2.findContours(img,modes[0], methods[1])
         #sorted by smalles perimeters first
-        cv2.imshow('detectLED', img)
+        #cv2.imshow('detectLED', img)
         contours = sorted(contours, key=lambda x: cv2.arcLength(x, True))
         print(len(contours)) 
     
@@ -252,6 +241,7 @@ class WhiteboardView:
         self.penDown = False
         self.lastPen = None
         self.calibrating = False
+        self.corners = 0
     #this method reads images sent over a socket via the slave whiteboard.
 
     def runVideo(self):
@@ -299,7 +289,6 @@ class WhiteboardView:
             self.nextFrame(img)
             if self.debug:
                 cv2.waitKey(0)
-                cv2.imshow('original', img)
             ret, img = cap.read()
 
 
@@ -309,7 +298,6 @@ class WhiteboardView:
         
 def main():
     from whiteboardView import cvHelper
-    cv2.imshow('blue',cvHelper.colorSelect2(cv2.imread('blue.png')))
     cv2.waitKey(0)
 if __name__ == '__main__':
     main()

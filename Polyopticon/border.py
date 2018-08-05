@@ -42,6 +42,8 @@ class Border:
         _,contours,_ = cv2.findContours(img,modes[0], methods[0])
 
 
+
+        img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
         if not contours: 
             if self.debug:
                 print('no contours')
@@ -57,7 +59,6 @@ class Border:
             rect = cv2.minAreaRect(c)
             box= cv2.boxPoints(rect)
             box = np.int0(box)
-            img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
             cv2.imshow('c', cv2.drawContours(img1, [box], 0, (0,255,255), 3))
             #cv2.waitKey(0)
             box = tuple([tuple([int(x) - int(x) % 2, int(y) - int(y) % 2]) for x,y in box])
@@ -94,64 +95,6 @@ class Border:
         
         return False
         
-    def findBorder(self, img):
-        if self.debug:
-            print('border.findBorder')
-
-        #cv contour specifics
-        modes=[cv2.RETR_EXTERNAL, cv2.RETR_LIST, cv2.RETR_CCOMP, cv2.RETR_TREE, cv2.RETR_FLOODFILL]
-        methods=[cv2.CHAIN_APPROX_NONE, cv2.CHAIN_APPROX_SIMPLE]
-        _,contours,_ = cv2.findContours(img,modes[0], methods[0])
-
-        if not contours:
-            if self.debug:
-                print('not enough contours')
-            return
-
-        #sort contours largest to small
-        contours = sorted(contours, key=lambda x: cv2.arcLength(x, False), reverse=True)
-
-
-        
-        #Smallest rectangle containing the largest contour
-        rect = cv2.minAreaRect(contours[0])
-        if rect is None:
-            if self.debug:
-                print("no rectangle")
-            return
-        #set of points
-        box = cv2.boxPoints(rect)
-        #set of points rounded to the nearest 5 to remove slight variance
-        box = tuple([tuple([int(x) - int(x) % 2, int(y) - int(y) % 2]) for x,y in box])
-        if self.debug:
-            print(box, "Box")
-            img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
-            img1 = cv2.drawContours(img1, [np.int0(box)], 0,(0,0,255),2)
-            cv2.imshow('potentialBox', img1)
-        width, height = img.shape[:2]
-        #checking size of contour --- if it's two small it wont be accepted
-        if (abs(box[0][0] - box[1][0]) > width / 4 or abs(box[0][0] - box[2][0]) > width/4) and (abs(box[0][1] - box[1][1]) > height/4 or abs(box[0][1] - box[2][1]) > height/4):
-            self.potentialBorder.update((box,))
-        if self.debug:
-            print(self.potentialBorder)
-        if len(self.potentialBorder) == 0:
-            return 
-        #Set the border if it has more than 10 counts
-        border = self.potentialBorder.most_common(1)[0]
-        if  border[1] >= self.minBorderThreshold:
-            print(border[0])
-            self.setBorder(border[0])
-
-#    def borderFound(self):
-#        mostCommon = self.potentialBorder.most_common()
-#        if self.debug:
-#            print(mostCommon)
-#        if len(mostCommon) is not 0 and mostCommon[0][1] > minBorderThreshold:
-#            
-#            return True
-#        else:
-#            return False
-    
     def setBorder(self, border):
         self.borderboundries = border
         self.borderFound = True
@@ -161,7 +104,7 @@ class Border:
         #self.topLeft = sorted(sorted(border)[:2], key = lambda x : x[1] )[0]
         #self.topRight = sorted(sorted(border)[2:], key = lambda x : x[1])[0]
         #self.bottomLeft  = sorted(sorted(border)[:2], key = lambda x : x[1])[1]
-        #get width height and slope for cornter points
+        #get width height and slope for corner points
         self.width = math.sqrt((self.topRight[1] - self.topLeft[1])**2 + (self.topRight[0] - self.topLeft[0])**2)
         self.height = math.sqrt((self.bottomLeft[1] - self.topLeft[1])**2 + (self.bottomLeft[0] - self.topLeft[0])**2)
         #rise over run baby
@@ -186,9 +129,15 @@ class Border:
         return [( xPos - self.topLeft[0]) * 100 / self.width , (yPos - self.topLeft[1]) * 100/ self.height ]
 
     def inBorder(self, point):
-        p = Point(point[0], point[1])
-        polygon = Polygon((self.borderboundries[0],self.borderboundries[1],self.borderboundries[2],self.borderboundries[3]))
-        return polygon.contains(p)
+        p = []
+        for x in [-2, 2]:
+            for y in [-2, 2]:
+                p = Point(point[0] + x, point[1] + y)   
+                polygon = Polygon((self.borderboundries[0],self.borderboundries[1],self.borderboundries[2],self.borderboundries[3]))
+                if not polygon.contains(p):
+                    return False
+        
+        return True
 #        borderBuffer = 5
 #        topLine = (point[0] - self.topLeft[0]) * self.slope + self.topLeft[1] 
 #        bottomLine = (point[0] - self.bottomLeft[0]) *  self.slope + self.bottomLeft[1] 
