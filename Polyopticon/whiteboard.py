@@ -109,6 +109,7 @@ class DrawSocket(object):
                 data = data + client.recv(size)
                 if data is b'' or data.decode("utf-8").rstrip() is '':
                     if self.debug:
+                        self.connected = False
                         print("no data, client dead")
                     return 
 
