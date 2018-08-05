@@ -177,7 +177,7 @@ class Paint(object):
         self.currentSize = 0
 
         self.canvas = Canvas(self.root, bg='black')# , width=600, height=600)
-        self.canvas.pack(fill=BOTH, expand=YES, padx = 10, pady = 10)
+        self.canvas.pack(fill=BOTH, expand=YES, padx = 0, pady = 0)
         
         self.addCanvasButtons()
         self.root.config(background="dark blue")
@@ -257,7 +257,7 @@ class Paint(object):
         if self.master:
             self.sendToSlave('calib,done')
         self.fullClearCanvas()
-        self.canvas.pack(fill=BOTH, expand=YES, padx=10, pady=10)
+        # self.canvas.pack(fill=BOTH, expand=YES, padx=0, pady=10)
         self.addCanvasButtons()
 
     def addCanvasButtons(self):
