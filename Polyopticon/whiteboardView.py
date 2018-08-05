@@ -77,7 +77,7 @@ class WhiteboardView:
         if self.penDown:
             #checking distance between pen strokes -- don't want misfires to draw lines
             if self.lastPen is not None:
-                if abs(self.lastPen[0] - LEDx) > 10 or abs(self.lastPen[1] - LEDy) > 10:
+                if abs(self.lastPen[0] - LEDx) > 25 or abs(self.lastPen[1] - LEDy) > 25:
                     self.up()
                     self.down((LEDx, LEDy))
             self.newLEDPos((LEDx,LEDy))
@@ -218,6 +218,10 @@ class WhiteboardView:
                 return (x,y)
         return None
 
+    def close(self):
+        self.s.close()
+        cv2.DestroyAllWindows()
+        
 def main():
     from whiteboard import Paint
     p = Paint()

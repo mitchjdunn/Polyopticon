@@ -58,7 +58,7 @@ class Border:
         #set of points
         box = cv2.boxPoints(rect)
         #set of points rounded to the nearest 5 to remove slight variance
-        box = tuple([tuple([int(x) - int(x) % 5, int(y) - int(y) % 5]) for x,y in box])
+        box = tuple([tuple([int(x) - int(x) % 2, int(y) - int(y) % 2]) for x,y in box])
         if self.debug:
             print(box, "Box")
             #img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
@@ -93,9 +93,9 @@ class Border:
         if self.debug:
             print("setborder({})".format(border))
         #get points of rectangle
-        self.topLeft = sorted(sorted(border)[:2], key = lambda x : x[1])[0]
+        self.topLeft = sorted(sorted(border)[:2], key = lambda x : x[1] )[0]
         self.topRight = sorted(sorted(border)[2:], key = lambda x : x[1])[0]
-        self.bottomLeft  = sorted(sorted(border)[:2], key = lambda x : x [1])[1]
+        self.bottomLeft  = sorted(sorted(border)[:2], key = lambda x : x[1])[1]
         #get width height and slope for cornter points
         self.width = math.sqrt((self.topRight[1] - self.topLeft[1])**2 + (self.topRight[0] - self.topLeft[0])**2)
         self.height = math.sqrt((self.bottomLeft[1] - self.topLeft[1])**2 + (self.bottomLeft[0] - self.topLeft[0])**2)
