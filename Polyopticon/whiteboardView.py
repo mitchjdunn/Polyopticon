@@ -10,17 +10,19 @@ from border import Border
 
 class cvHelper:
 
+    #color select white
     def colorSelect(img):
          hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
          lower_white = np.array([0,0,220])
          upper_white = np.array([255,35,255])
          mask = cv2.inRange(hsv, lower_white, upper_white)
          return cv2.bitwise_and(img,img, mask= mask)
+    #color select blue
     def colorSelect2(img):
          hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-         lower_white = np.array([0,0,200])
-         upper_white = np.array([255,45,255])
-         mask = cv2.inRange(hsv, lower_white, upper_white)
+         lower_blue = np.array([110,120,120])
+         upper_blue = np.array([130,255,255])
+         mask = cv2.inRange(hsv, lower_blue, upper_blue)
          return cv2.bitwise_and(img,img, mask= mask)
     def addEdges(img):
         edges = cv2.Canny(img,80,40)
@@ -39,6 +41,7 @@ class WhiteboardView:
         self.prod = prod
         self.penDown = False
         self.lastPen = None
+        self.calibrating = False
         self.readyMessageSent = False
         self.s = socket.socket()
         self.ports = [4545,4546,4547,4548]
@@ -91,22 +94,58 @@ class WhiteboardView:
 
     def borderCheck(self,img):
         #CHECKING FOR BORDER
-        if self.debug:
-            print('borderCheck')
-        if self.border is None:
-            self.border = Border(debug=self.debug)
-            if self.prod:
-                pass
-        if self.corners < 4:
-            pass       
-        #TODO manage movement??
-        if not self.border.borderFound:
-            #CHANGE IMG BEFORE FINDBORDER
-            img1 = cvHelper.colorSelect2(img.copy())
-            img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-            self.border.findBorder(img1)
+        if not self.video:
+            if self.debug:
+                print('borderCheck')
+            if self.border is None:
+                self.border = Border(debug=self.debug)
+                if self.prod:
+                    pass
+            if self.corners < 4:
+                img1 = cvHelper.colorSelect2(img.copy())
+                img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+                if self.corners ==0:
+                    #topLeft, NW
+                    if not self.calibrating:
+                        self.p.calibNW()
+                        self.calibrating = True
+                    if self.border.findCorner(img1, 'topleft'):
+                        corners += 1
+                        self.calibrating = False
+                elif self.corners == 1:
+                    #topRight, NE
+                    if not self.calibrating:
+                        self.p.calibNE()
+                        self.calibrating = True
+                    if self.border.findCorner(img1, 'topright'):
+                        self.calibrating = False
+                        corners += 1
+                elif self.corners == 2:
+                    #topRight, SW
+                    if not self.calibrating:
+                        self.p.calibSW()
+                        self.calibrating = True
+                    if self.border.findCorner(img1, 'bottomleft'):
+                        self.calibrating = False
+                        corners += 1
+                elif self.corners == 3:
+                    #topRight, SW
+                    if not self.calibrating:
+                        self.p.calibSE()
+                        self.calibrating = True
+                    if self.border.findCorner(img1, 'bottomleft'):
+                        self.calibrating = False
+                        self.corners += 1
+                        return True
             return False
-        return True
+        else:
+            #TODO manage movement??
+            if not self.border.borderFound:
+                #CHANGE IMG BEFORE FINDBORDER
+                img1 = cvHelper.colorSelect2(img.copy())
+                img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+                self.border.findBorder(img1)
+                return False
 
     def nextFrame(self, img):
         if self.debug:
@@ -232,10 +271,8 @@ class WhiteboardView:
         cv2.DestroyAllWindows()
         
 def main():
-    from whiteboard import Paint
-    p = Paint()
-    w = WhiteboardView(p, debug=True)
-    w.runVideoFromPath("test1.h264")
-
+    from whiteboardView import cvHelper
+    cv2.imshow('blue',cvHelper.colorSelect2(cv2.imread('blue.png')))
+    cv2.waitKey(0)
 if __name__ == '__main__':
     main()

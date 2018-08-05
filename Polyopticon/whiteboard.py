@@ -54,7 +54,7 @@ class VideoSocket():
             camera = picamera.PiCamera(framerate = 30)
             camera.resolution = (1280,720)
             camera.rotation =270
-            camera.exposure_mode = 'spotlight'
+            #camera.exposure_mode = 'spotlight'
             while True:
                 stream = io.BytesIO()
                 for _ in camera.capture_continuous(stream, 'jpeg', use_video_port = True):
@@ -179,7 +179,7 @@ class Paint(object):
         self.canvas.pack(fill=BOTH, expand=YES, padx = 10, pady = 10)
         
         self.addCanvasButtons()
-        self.root.config(background="white")
+        self.root.config(background="dark blue")
 
         self.history = ""
 
@@ -200,7 +200,7 @@ class Paint(object):
             
             if self.debug:
                 self.debugmenu = Menu(self.menubar, tearoff=0)
-                self.debugmenu.add_command(label="AddButtons", command=self.doneCalib)
+                self.debugmenu.add_command(label="Done Calib", command=self.doneCalib)
                 self.debugmenu.add_command(label="calibNW", command=self.calibNW)
                 self.debugmenu.add_command(label="calibNE", command=self.calibNE)
                 self.debugmenu.add_command(label="calibSW", command=self.calibSW)
@@ -220,26 +220,37 @@ class Paint(object):
         self.canvas.create_rectangle(0, 0, self.canvas.winfo_width(), self.canvas.winfo_height(), fill='black')
     
     def calibNW(self):
+        if self.master:
+            self.sendToSlave('calib,nw')
         self.root.update()
         self.fullClearCanvas()
-        self.canvas.create_rectangle(10, 10, 110, 110, fill='white')
+        self.canvas.create_rectangle(10, 10, 110, 110, fill='dark blue')
 
     def calibSW(self):
+        if self.master:
+            self.sendToSlave('calib,sw')
+            
         self.root.update()
         self.fullClearCanvas()
         self.canvas.create_rectangle(10, self.canvas.winfo_height() - 110, 110, self.canvas.winfo_height() - 10, fill='white')
         
     def calibSE(self):
+        if self.master:
+            self.sendToSlave('calib,se')
         self.root.update()
         self.fullClearCanvas()
-        self.canvas.create_rectangle( self.canvas.winfo_width() - 110, self.canvas.winfo_height() - 110, self.canvas.winfo_width() - 10, self.canvas.winfo_height() - 10, fill='white')
+        self.canvas.create_rectangle( self.canvas.winfo_width() - 110, self.canvas.winfo_height() - 110, self.canvas.winfo_width() - 10, self.canvas.winfo_height() - 10, fill='dark blue')
 
     def calibNE(self):
+        if self.master:
+            self.sendToSlave('calib,ne')
         self.root.update()
         self.fullClearCanvas()
-        self.canvas.create_rectangle(self.canvas.winfo_width() - 110, 10, self.canvas.winfo_width() - 10, 110, fill='white')
+        self.canvas.create_rectangle(self.canvas.winfo_width() - 110, 10, self.canvas.winfo_width() - 10, 110, fill='dark blue')
 
     def doneCalib(self):
+        if self.master:
+            self.sendToSlave('calib,done')
         self.fullClearCanvas()
         self.canvas.pack(fill=BOTH, expand=YES, padx=10, pady=10)
         self.addCanvasButtons()
@@ -583,6 +594,21 @@ class Paint(object):
                 print('received image')
             b64str = line.split(sep=',')[1]
             self.insert64image(b64str)
+        elif line.startswith('calib'):
+            splits = line.split(sep=',')
+            if self.debug:
+                print('received calib')
+            if splits[1] is 'nw':
+                self.calibNW()
+            elif splits[1] is 'ne':
+                self.calibNE()
+            elif splits[1] is 'sw':
+                self.calibSW()
+            elif splits[1] is 'se':
+                self.calibSE()
+            elif splits[1] is 'done':
+                self.doneCalib()
+
         elif self.prev is not None:
             if self.debug:
                 print(line)
@@ -629,9 +655,9 @@ if __name__ == '__main__':
     print("Setting up tk")
     try:
         p = Paint(master=True, debug=True)
-        w = WhiteboardView(p, debug=True,prod=True)
-        threading.Thread(target=w.runVideoFromPath, args=('test5.h264',)).start()
+        #w = WhiteboardView(p, debug=True,prod=True)
+        #threading.Thread(target=w.runVideoFromPath, args=('test5.h264',)).start()
         p.startLoop()
     finally:
         p.close()
-        w.close()
+        #w.close()
