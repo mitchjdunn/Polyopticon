@@ -30,6 +30,68 @@ class Border:
         self.potentialBorder = collections.Counter()
         self.minBorderThreshold = 10
 
+    
+    #Takes in image and looks for corner squares for finding border
+    #return true if found, false if not
+    def findCorner(self,img, descriptor):
+        if self.debug:
+            print('border.findeCorner')
+        modes=[cv2.RETR_EXTERNAL, cv2.RETR_LIST, cv2.RETR_CCOMP, cv2.RETR_TREE, cv2.RETR_FLOODFILL]
+        methods=[cv2.CHAIN_APPROX_NONE, cv2.CHAIN_APPROX_SIMPLE]
+        _,contours,_ = cv2.findContours(img,modes[0], methods[0])
+        if not contours: 
+            if self.debug:
+                print('no contours')
+                return
+        contours = sorted(contours, key=lambda x: cv2.arcLength(x, False), reverse=True)
+        
+        for c in contours:
+            poly = cv2.approxPolyDP(c, 25, True)
+            if len(poly) != 4:
+                continue
+            for x in poly:
+                pass
+                #if not self.inBorder(x):
+                #    continue
+            
+            rect = cv2.minAreaRect(c)
+            box= cv2.boxPoints(rect)
+            box = np.int0(box)
+            box = tuple([tuple([int(x) - int(x) % 2, int(y) - int(y) % 2]) for x,y in box])
+
+            print(box)
+            if descriptor is 'topright':
+                print('topright')
+                print(sorted(sorted(box)[2:], key = lambda x : x[1])[0])
+                self.topRight =  sorted(sorted(box)[2:], key = lambda x : x[1])[0]
+                return True
+            elif descriptor is 'topleft':
+                print('topleft')
+                print(sorted(sorted(box)[:2], key = lambda x : x[1])[0])
+                self.topLeft = sorted(sorted(box)[:2], key = lambda x : x[1])[0]
+                return True
+            elif descriptor is 'bottomright':
+                print('bottomright')
+                print(sorted(sorted(box)[2:], key = lambda x : x[1])[1])
+                bottmRight =sorted(sorted(box)[2:], key = lambda x : x[1])[1] 
+                self.setBorder((self.topRight,self.topLeft,bottomRight,self.bottomRight))
+                return True
+            elif descriptor is 'bottomleft':
+                print('bottomleft')
+                print(sorted(sorted(box)[:2], key = lambda x : x[1])[1])
+                self.bottomLeft=sorted(sorted(box)[:2], key = lambda x : x[1])[1]
+                return True
+            else:
+                print('descriptor invalid')
+                return False
+            #TODO remove
+            img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
+            img1 = cv2.drawContours(img1, [poly],-1, (255,0,0), 3)
+            cv2.imshow('poly', img1)
+            cv2.waitKey(0)
+        
+        return False
+        
     def findBorder(self, img):
         if self.debug:
             print('border.findBorder')
@@ -61,9 +123,9 @@ class Border:
         box = tuple([tuple([int(x) - int(x) % 2, int(y) - int(y) % 2]) for x,y in box])
         if self.debug:
             print(box, "Box")
-            #img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
-            #img1 = cv2.drawContours(img1, [np.int0(box)], 0,(0,0,255),2)
-            #cv2.imshow('potentialBox', img1)
+            img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
+            img1 = cv2.drawContours(img1, [np.int0(box)], 0,(0,0,255),2)
+            cv2.imshow('potentialBox', img1)
         width, height = img.shape[:2]
         #checking size of contour --- if it's two small it wont be accepted
         if (abs(box[0][0] - box[1][0]) > width / 4 or abs(box[0][0] - box[2][0]) > width/4) and (abs(box[0][1] - box[1][1]) > height/4 or abs(box[0][1] - box[2][1]) > height/4):
@@ -75,6 +137,7 @@ class Border:
         #Set the border if it has more than 10 counts
         border = self.potentialBorder.most_common(1)[0]
         if  border[1] >= self.minBorderThreshold:
+            print(border[0])
             self.setBorder(border[0])
 
 #    def borderFound(self):
@@ -133,3 +196,25 @@ class Border:
 #        if point[0] > topLine + borderBuffer and point[0] < bottomLine + borderBuffer and point[1] > leftLine + borderBuffer and point[1] < rightLine - borderBuffer:
 #            return True
 #
+def main():
+    from border import Border
+    from whiteboardView import cvHelper
+    b = Border(debug=True)
+    img = cv2.imread('topRight.png')
+    img = cvHelper.colorSelect(img)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    b.findCorner(img,'topright')
+    img = cv2.imread('topLeft.png')
+    img = cvHelper.colorSelect(img)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    b.findCorner(img,'topleft')
+    img = cv2.imread('bottomRight.png')
+    img = cvHelper.colorSelect(img)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    b.findCorner(img,'bottomright')
+    img = cv2.imread('bottomLeft.png')
+    img = cvHelper.colorSelect(img)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    b.findCorner(img,'bottomleft')
+if __name__ == '__main__':
+    main()
