@@ -36,18 +36,17 @@ class WhiteboardView:
     def __init__(self, whiteboard, debug=False, prod=False):
         self.p = whiteboard
         self.upcount=0
-        self.border = None
         self.debug = debug
         self.prod = prod
+        self.border = None
         self.penDown = False
         self.lastPen = None
         self.calibrating = False
-        self.readyMessageSent = False
-        self.s = socket.socket()
         self.framesToSkip = 5
+        self.corners = 0
         self.video = False
         self.ports = [4545,4546,4547,4548]
-        self.corners = 0
+        self.s = socket.socket()
 
 
         #Socket for video stream
@@ -253,7 +252,10 @@ class WhiteboardView:
         return None
 
     def recalibrate(self):
-        self.border=Border(debug = self.debug)
+        self.border = None
+        self.penDown = False
+        self.lastPen = None
+        self.calibrating = False
     #this method reads images sent over a socket via the slave whiteboard.
 
     def runVideo(self):
