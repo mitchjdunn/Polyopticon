@@ -20,12 +20,13 @@ class Border:
         #top left corner of the rectangle.  relative coordinates are  (0,0)
         self.topLeft = []
         #slope of the top line of the rectangle.  Used for relative positioning of the LED
-        self.slope = 0
+        self.slope = 0.0
         #rectangle dimensions
         self.height = 0
         self.width = 0
         self.topRight = []
         self.bottomLeft = []
+        self.bottomRight = []
         #list of coordinates for corners of rectangle. counted for assurance 
         self.potentialBorder = collections.Counter()
         self.minBorderThreshold = 10
@@ -39,6 +40,8 @@ class Border:
         modes=[cv2.RETR_EXTERNAL, cv2.RETR_LIST, cv2.RETR_CCOMP, cv2.RETR_TREE, cv2.RETR_FLOODFILL]
         methods=[cv2.CHAIN_APPROX_NONE, cv2.CHAIN_APPROX_SIMPLE]
         _,contours,_ = cv2.findContours(img,modes[0], methods[0])
+
+
         if not contours: 
             if self.debug:
                 print('no contours')
@@ -47,16 +50,16 @@ class Border:
         
         for c in contours:
             poly = cv2.approxPolyDP(c, 25, True)
-            if len(poly) != 4:
-                continue
-            for x in poly:
-                pass
+            print(poly)
                 #if not self.inBorder(x):
                 #    continue
             
             rect = cv2.minAreaRect(c)
             box= cv2.boxPoints(rect)
             box = np.int0(box)
+            img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
+            cv2.imshow('c', cv2.drawContours(img1, [box], 0, (0,255,255), 3))
+            #cv2.waitKey(0)
             box = tuple([tuple([int(x) - int(x) % 2, int(y) - int(y) % 2]) for x,y in box])
 
             print(box)
@@ -73,8 +76,8 @@ class Border:
             elif descriptor is 'bottomright':
                 print('bottomright')
                 print(sorted(sorted(box)[2:], key = lambda x : x[1])[1])
-                bottmRight =sorted(sorted(box)[2:], key = lambda x : x[1])[1] 
-                self.setBorder((self.topRight,self.topLeft,bottomRight,self.bottomRight))
+                self.bottomRight =sorted(sorted(box)[2:], key = lambda x : x[1])[1] 
+                self.setBorder((self.topRight,self.topLeft,self.bottomLeft, self.bottomRight))
                 return True
             elif descriptor is 'bottomleft':
                 print('bottomleft')
@@ -87,8 +90,7 @@ class Border:
             #TODO remove
             img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
             img1 = cv2.drawContours(img1, [poly],-1, (255,0,0), 3)
-            cv2.imshow('poly', img1)
-            cv2.waitKey(0)
+            #cv2.waitKey(0)
         
         return False
         
@@ -156,25 +158,25 @@ class Border:
         if self.debug:
             print("setborder({})".format(border))
         #get points of rectangle
-        self.topLeft = sorted(sorted(border)[:2], key = lambda x : x[1] )[0]
-        self.topRight = sorted(sorted(border)[2:], key = lambda x : x[1])[0]
-        self.bottomLeft  = sorted(sorted(border)[:2], key = lambda x : x[1])[1]
+        #self.topLeft = sorted(sorted(border)[:2], key = lambda x : x[1] )[0]
+        #self.topRight = sorted(sorted(border)[2:], key = lambda x : x[1])[0]
+        #self.bottomLeft  = sorted(sorted(border)[:2], key = lambda x : x[1])[1]
         #get width height and slope for cornter points
         self.width = math.sqrt((self.topRight[1] - self.topLeft[1])**2 + (self.topRight[0] - self.topLeft[0])**2)
         self.height = math.sqrt((self.bottomLeft[1] - self.topLeft[1])**2 + (self.bottomLeft[0] - self.topLeft[0])**2)
         #rise over run baby
-        self.slope = (self.topRight[1] - self.topLeft[1]) / (self.topRight[0] - self.topLeft[0])
+        self.slope = float(self.topRight[1] - self.topLeft[1]) / (self.topRight[0] - self.topLeft[0])
 
     def getPositionOfPoint(self, point):
         #relative x position is intersect formula for line with a perpendicular slope
-        a = np.array([[1, -1/self.slope], [1, -self.slope]]) 
-        b = np.array([point[1] - (1/self.slope) * point[0] ,self.topLeft[1] - (self.slope * self.topLeft[0])])
+        a = np.array([[1.0, -1.0/self.slope], [1.0, float(-self.slope)]]) 
+        b = np.array([float(point[1]) - (1.0/self.slope) * float(point[0]) ,float(self.topLeft[1] - (self.slope * self.topLeft[0]))])
         #X is equal to the x position of the intersect of the top line and a line from point with a slope perpendicular to the top line.
         xPos = np.linalg.solve(a,b)[1]
         if self.debug:
             print(np.linalg.solve(a,b))
-        a = np.array([[1, -self.slope], [1, -1/self.slope]]) 
-        b = np.array([point[1]   - (self.slope) * point[0] ,self.topLeft[1] - ((1/self.slope) * self.topLeft[0])])
+        a = np.array([[1.0, float(-self.slope)], [1.0, -1.0/self.slope]]) 
+        b = np.array([float(point[1])   - float(self.slope) * float(point[0]) ,float(self.topLeft[1]) - ((1.0/self.slope) * self.topLeft[0])])
         yPos = np.linalg.solve(a,b)[0]
         if self.debug:
             print(np.linalg.solve(a,b))
