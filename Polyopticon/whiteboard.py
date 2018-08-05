@@ -591,7 +591,11 @@ class Paint(object):
         elif line.startswith("color"):
             if self.debug:
                 print('got color')
-            self.setColor(int(line.split(sep=',')[1]))
+            color = line.split(sep=',')[1]
+            if 'black' in color:
+                self.useEraser()
+            else:
+                self.setColor(int(color))
         elif line.startswith("size"):
             if self.debug:
                 print('got size')
