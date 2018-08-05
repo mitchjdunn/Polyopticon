@@ -1,8 +1,9 @@
+#!/usr/bin/env python3 
+
 from tkinter import *
 import io
-from tkinter.filedialog import askopenfilename
-from PIL import Image 
-from PIL import ImageTk
+from tkinter.filedialog import askopenfilename, asksaveasfile
+from PIL import Image, ImageTk
 import threading
 import socket 
 import traceback
@@ -199,7 +200,7 @@ class Paint(object):
             
             if self.debug:
                 self.debugmenu = Menu(self.menubar, tearoff=0)
-                self.debugmenu.add_command(label="AddButtons", command=self.doneCalib)
+                self.debugmenu.add_command(label="Done Calib", command=self.doneCalib)
                 self.debugmenu.add_command(label="calibNW", command=self.calibNW)
                 self.debugmenu.add_command(label="calibNE", command=self.calibNE)
                 self.debugmenu.add_command(label="calibSW", command=self.calibSW)
@@ -216,28 +217,40 @@ class Paint(object):
         self.clearDrawing()
         self.canvas.delete("all")
         self.canvas.pack(fill=BOTH, expand=YES, padx=0, pady=0)
+        self.canvas.create_rectangle(0, 0, self.canvas.winfo_width(), self.canvas.winfo_height(), fill='black')
     
     def calibNW(self):
+        if self.master:
+            self.sendToSlave('calib,nw')
         self.root.update()
         self.fullClearCanvas()
         self.canvas.create_rectangle(10, 10, 110, 110, fill='dark blue')
 
     def calibSW(self):
+        if self.master:
+            self.sendToSlave('calib,sw')
+            
         self.root.update()
         self.fullClearCanvas()
         self.canvas.create_rectangle(10, self.canvas.winfo_height() - 110, 110, self.canvas.winfo_height() - 10, fill='white')
         
     def calibSE(self):
+        if self.master:
+            self.sendToSlave('calib,se')
         self.root.update()
         self.fullClearCanvas()
         self.canvas.create_rectangle( self.canvas.winfo_width() - 110, self.canvas.winfo_height() - 110, self.canvas.winfo_width() - 10, self.canvas.winfo_height() - 10, fill='dark blue')
 
     def calibNE(self):
+        if self.master:
+            self.sendToSlave('calib,ne')
         self.root.update()
         self.fullClearCanvas()
         self.canvas.create_rectangle(self.canvas.winfo_width() - 110, 10, self.canvas.winfo_width() - 10, 110, fill='dark blue')
 
     def doneCalib(self):
+        if self.master:
+            self.sendToSlave('calib,done')
         self.fullClearCanvas()
         self.canvas.pack(fill=BOTH, expand=YES, padx=10, pady=10)
         self.addCanvasButtons()
@@ -245,19 +258,26 @@ class Paint(object):
     def addCanvasButtons(self):
         self.penButton = Button(self.root, text='pen', command=self.usePen, bg="dark blue", fg = "white")
         self.penButton.configure(width = 10, height = 6, bd=0) 
+        self.penButtonX = 10 
+        self.penButtonY = 10
         self.canvas.create_window(10, 10, anchor=NW, window=self.penButton)
 
-        # self.colorButton = Button(self.root, text='color', command=self.chooseColor, bg="dark blue", fg = "white")
-        self.colorButton = Button(self.root, text='color', command=self.fullClearCanvas, bg="dark blue", fg = "white")
+        self.colorButton = Button(self.root, text='color', command=self.chooseColor, bg="dark blue", fg = "white")
         self.colorButton.configure(width = 10, height = 6, bd = 0) 
+        self.colorButtonX = 10
+        self.colorButtonY = 90
         self.canvas.create_window(10, 90, anchor=NW, window=self.colorButton)
 
         self.eraserButton = Button(self.root, text='eraser', command=self.useEraser, bg="dark blue", fg = "white")
         self.eraserButton.configure(width = 10, bd = 0, height = 6)
+        self.eraserButtonX = 10 
+        self.eraserButtonY = 170 
         self.canvas.create_window(10, 170, anchor=NW, window=self.eraserButton)
 
         self.sizeButton = Button(self.root, text='Size (1)', command=self.changeSize, bg="dark blue", fg = "white")
         self.sizeButton.configure(width = 10, bd = 0, height = 6)
+        self.sizeButtonX = 10 
+        self.sizeButtonY = 250 
         self.canvas.create_window(10, 250, anchor=NW, window=self.sizeButton)
 
     def insert64image(self, base64string):
@@ -319,9 +339,16 @@ class Paint(object):
                 self.sendToSlave('image,{}'.format(b64image))
 
     def saveCanvasToFile(self):
-        # TODO 
-        pass
+        ps = self.canvas.postscript(file='export.ps', colormode = 'color')
+        ps = self.canvas.postscript(colormode = 'color')
 
+        f = asksaveasfile(mode='w', defaultextension='.jpg')
+        # dialog box was cancelled
+        if f is None:
+            return 
+
+        im = Image.open(io.BytesIO(ps.encode('utf-8')))
+        im.save(f, quality=99)
 
     def waitForMaster(self, drawsocket):
         broadcast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
@@ -371,6 +398,8 @@ class Paint(object):
         
     def startLoop(self): 
         self.setup()
+        self.root.update()
+        self.canvas.create_rectangle(0, 0, 4000, 4000, fill='black')
         self.root.mainloop()
         
     def changeSize(self):
@@ -471,10 +500,64 @@ class Paint(object):
                                width=self.lineWidth, fill=self.colors[self.color],
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
 
-    # TODO
+    # x and y are the normalized coordinates 
     def checkForButtonPress(self, x, y):
+        # Pen button
+        bx = self.penButtonX
+        by = self.penButtonY
+        bw = self.penButton.winfo_width()
+        bh = self.penButton.winfo_height()
+        if normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
+            # call the button press
+            usePen()
+            return True
+        
+        # Color button
+        bx = self.colorButtonX
+        by = self.colorButtonY
+        bw = self.colorButton.winfo_width()
+        bh = self.colorButton.winfo_height()
+        if normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
+            # call the button press
+            chooseColor()
+            return True
+
+        # Erase button
+        bx = self.eraseButtonX
+        by = self.eraseButtonY
+        bw = self.eraseButton.winfo_width()
+        bh = self.eraseButton.winfo_height()
+        if normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
+            # call the button press
+            useEraser()
+            return True
+
+        # Erase button
+        bx = self.sizeButtonX
+        by = self.sizeButtonY
+        bw = self.sizeButton.winfo_width()
+        bh = self.sizeButton.winfo_height()
+        if normalizedPointInBox(x, y, bx, by, bx + bw, by + bh):
+            # call the button press
+            changeSize()
+            return True
+
         return False
 
+    def normalizedPointInBox(self, nx, ny, x, y, x2, y2):
+        # make sure canvas width/height are up to date 
+        self.root.update()
+        w = canvas.winfo_width() 
+        h = canvas.winfo_height()
+        
+        # normalize the point into the same variables
+        x = float(x) / float(w) * 100.0
+        y = float(y) / float(h) * 100.0
+        x2 = float(x2) / float(w) * 100.0
+        y2 = float(y2) / float(h) * 100.0
+
+        return nx > x and nx < x2 and ny > y and ny < y2 
+        
     def clearDrawing(self):
         self.root.update()
         self.canvas.create_rectangle(0, 0, self.canvas.winfo_width(), self.canvas.winfo_height(), fill='black')
@@ -511,6 +594,21 @@ class Paint(object):
                 print('received image')
             b64str = line.split(sep=',')[1]
             self.insert64image(b64str)
+        elif line.startswith('calib'):
+            splits = line.split(sep=',')
+            if self.debug:
+                print('received calib')
+            if splits[1] is 'nw':
+                self.calibNW()
+            elif splits[1] is 'ne':
+                self.calibNE()
+            elif splits[1] is 'sw':
+                self.calibSW()
+            elif splits[1] is 'se':
+                self.calibSE()
+            elif splits[1] is 'done':
+                self.doneCalib()
+
         elif self.prev is not None:
             if self.debug:
                 print(line)
