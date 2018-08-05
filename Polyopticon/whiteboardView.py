@@ -188,10 +188,6 @@ class WhiteboardView:
         #checks if border exists.  If it hasn't continue to look for it
         if not self.borderCheck(img):
             return
-        if not self.readyMessageSent and self.prod:
-            self.readyMessageSent = True
-            #TODO handle ready message
-            #self.send('ready')
             
         #SHOW BORDER
         if self.debug:
