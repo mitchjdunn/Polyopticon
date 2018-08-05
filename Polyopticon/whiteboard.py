@@ -193,6 +193,8 @@ class Paint(object):
             self.menubar = Menu(self.root)
         
             self.filemenu = Menu(self.menubar, tearoff=0)
+            self.filemenu.add_command(label="Recalibrate", command=self.recalibrate)
+            self.filemenu.add_separator()
             self.filemenu.add_command(label="Upload Picture", command=self.insertImage)
             self.filemenu.add_command(label="Save Picture", command=self.saveCanvasToFile)
             self.filemenu.add_separator()
@@ -213,6 +215,10 @@ class Paint(object):
             self.d = DrawSocket(self, debug=self.debug)
             threading.Thread(target = self.waitForMaster, args=[self.d] ).start()
 
+
+    def recalibrate(self):
+        if not self.w is None:
+            self.w.recalibrate()
 
     def fullClearCanvas(self):
         self.clearDrawing()
