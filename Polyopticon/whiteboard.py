@@ -178,7 +178,7 @@ class Paint(object):
         self.canvas.pack(fill=BOTH, expand=YES, padx = 10, pady = 10)
         
         self.addCanvasButtons()
-        self.root.config(background="white")
+        self.root.config(background="dark blue")
 
         self.history = ""
 
@@ -220,7 +220,7 @@ class Paint(object):
     def calibNW(self):
         self.root.update()
         self.fullClearCanvas()
-        self.canvas.create_rectangle(10, 10, 110, 110, fill='white')
+        self.canvas.create_rectangle(10, 10, 110, 110, fill='dark blue')
 
     def calibSW(self):
         self.root.update()
@@ -230,12 +230,12 @@ class Paint(object):
     def calibSE(self):
         self.root.update()
         self.fullClearCanvas()
-        self.canvas.create_rectangle( self.canvas.winfo_width() - 110, self.canvas.winfo_height() - 110, self.canvas.winfo_width() - 10, self.canvas.winfo_height() - 10, fill='white')
+        self.canvas.create_rectangle( self.canvas.winfo_width() - 110, self.canvas.winfo_height() - 110, self.canvas.winfo_width() - 10, self.canvas.winfo_height() - 10, fill='dark blue')
 
     def calibNE(self):
         self.root.update()
         self.fullClearCanvas()
-        self.canvas.create_rectangle(self.canvas.winfo_width() - 110, 10, self.canvas.winfo_width() - 10, 110, fill='white')
+        self.canvas.create_rectangle(self.canvas.winfo_width() - 110, 10, self.canvas.winfo_width() - 10, 110, fill='dark blue')
 
     def doneCalib(self):
         self.fullClearCanvas()
@@ -557,9 +557,9 @@ if __name__ == '__main__':
     print("Setting up tk")
     try:
         p = Paint(master=True, debug=True)
-        w = WhiteboardView(p, debug=True,prod=True)
-        threading.Thread(target=w.runVideoFromPath, args=('test5.h264',)).start()
+        #w = WhiteboardView(p, debug=True,prod=True)
+        #threading.Thread(target=w.runVideoFromPath, args=('test5.h264',)).start()
         p.startLoop()
     finally:
         p.close()
-        w.close()
+        #w.close()
