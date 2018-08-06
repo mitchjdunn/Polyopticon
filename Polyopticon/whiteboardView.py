@@ -14,7 +14,7 @@ class cvHelper:
     def colorSelect(img):
          hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
          lower_white = np.array([0,0,245])
-         upper_white = np.array([255,15,255])
+         upper_white = np.array([180,15,255])
          mask = cv2.inRange(hsv, lower_white, upper_white)
          return cv2.bitwise_and(img,img, mask= mask)
     #color select blue
