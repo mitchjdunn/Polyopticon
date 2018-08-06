@@ -172,7 +172,7 @@ class Paint(object):
         self.currentColor = 0
         self.root = Tk()
         self.slavesocket = None
-        self.colors = ['red', 'blue', 'green', 'purple', 'orange']
+        self.colors = ['red', 'blue', 'green', 'purple', 'brown', 'darkorange2']
         self.sizes = [1, 3, 5, 8, 10, 20]
         self.currentSize = 0
 
