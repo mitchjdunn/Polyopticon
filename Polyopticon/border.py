@@ -121,33 +121,22 @@ class Border:
         self.leftslope = float(self.topLeft[1] - self.bottomLeft[1]) / (self.topLeft[0] - self.bottomLeft[0])
 
     def getPositionOfPoint(self, point):
-        # get x position from intercept with top line
-        #a is the coefficients of the variables in a system of equation determined by the intersect formula of 2 lines
-        # two lines are from topLeft point with topslope and the given point and 1/topslope
-        a = np.array([[1.0, -1.0/self.topslope], [1.0, float(-self.topslope)]]) 
-        b = np.array([float(point[1]) - (1.0/self.topslope) * float(point[0]) ,float(self.topLeft[1] - (self.topslope * self.topLeft[0]))])
-        xPosTop = np.linalg.solve(a,b)[1]
+
+        #get the x value of the point of intersection
+        xPosTop = self.lineInterceptForm(point, 1/self.topslope, self.topLeft, self.topslope)[0] 
          # get x position from intercept with bottom line
-        
-        a = np.array([[1.0, -1.0/self.bottomslope], [1.0, float(-self.bottomslope)]]) 
-        b = np.array([float(point[1]) - (1.0/self.bottomslope) * float(point[0]) ,float(self.bottomLeft[1] - (self.bottomslope * self.bottomLeft[0]))])
-        xPosBottom = np.linalg.solve(a,b)[1]
-
-
-
+        xPosBottom = self.lineInterceptForm(point, 1/self.bottomslope, self.bottomLeft, self.bottomslope)[0] 
         #Y position
         # get y position from intercept with left line
-        a = np.array([[1.0, -1.0/self.leftslope], [1.0, -1 * self.leftslope]]) 
-        b = np.array([float(point[1]) -1.0/self.leftslope * point[0] ,float(self.topLeft[1]) - (self.leftslope) * self.topLeft[0]])
-        yPosLeft = np.linalg.solve(a,b)[0]
-        a = np.array([[1.0, -1.0/self.rightslope], [1.0, -1.0*self.rightslope]]) 
-        b = np.array([float(point[1]) -1.0/self.rightslope * point[0] ,float(self.topRight[1]) - (self.rightslope) * self.topRight[0]])
-        yPosRight = np.linalg.solve(a,b)[0]
+        yPosLeft = self.lineInterceptForm(point, 1/self.leftslope, self.topLeft, self.leftslope)[1]
+        # get y position from intercept with right line
+        yPosRight = self.lineInterceptForm(point, 1/self.rightslope, self.topRight,self.rightslope)[1]
+
         #normalize -- subtract from the orign
-        txavg=abs(xPosTop - self.topLeft[0]) * 100 / self.topwidth
-        bxavg=abs(xPosBottom - self.bottomLeft[0]) * 100 / self.bottomwidth
-        lyavg=abs(yPosLeft - self.topLeft[1]) * 100/ self.leftheight
-        ryavg=abs(yPosRight - self.topRight[1]) * 100/ self.rightheight
+        txavg=abs(xPosTop - self.topLeft[0]) / self.topwidth* 100
+        bxavg=abs(xPosBottom - self.topLeft[0]) / self.bottomwidth* 100
+        lyavg=abs(yPosLeft - self.topLeft[1]) / self.leftheight* 100
+        ryavg=abs(yPosRight - self.topLeft[1]) / self.rightheight* 100
         if self.debug:
             print(xPosTop)
             print(xPosBottom)
@@ -155,9 +144,8 @@ class Border:
             print(yPosRight)
             print('txavg:{}'.format(txavg))
             print('bxavg:{}'.format(bxavg))
-            print('lyavg:{}'.format(lyavg))
             print('ryavg:{}'.format(ryavg))
-        return [float(txavg + bxavg) /2, float(lyavg + ryavg) /2]
+        return [(txavg + bxavg) /2,(lyavg + ryavg) /2]
 
     def inBorder(self, point):
         p = []
@@ -167,27 +155,19 @@ class Border:
                 polygon = Polygon((self.borderboundries[0],self.borderboundries[1],self.borderboundries[2],self.borderboundries[3]))
                 if not polygon.contains(p):
                     return False
-        
         return True
+    def lineInterceptForm(self,point1, slope1, point2, slope2):
+        coefficients = np.array([[-slope1, 1], [-slope2, 1]])
+        solutions = np.array([point1[1] - slope1 * point1[0], point2[1] - slope2 * point2[0]])
+
+        intercept = np.linalg.solve(coefficients, solutions)
+        return(intercept)
 def main():
     from border import Border
     from whiteboardView import cvHelper
-    b = Border(debug=True)
-    img = cv2.imread('topRight.png')
-    img = cvHelper.colorSelect(img)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    b.findCorner(img,'topright')
-    img = cv2.imread('topLeft.png')
-    img = cvHelper.colorSelect(img)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    b.findCorner(img,'topleft')
-    img = cv2.imread('bottomRight.png')
-    img = cvHelper.colorSelect(img)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    b.findCorner(img,'bottomright')
-    img = cv2.imread('bottomLeft.png')
-    img = cvHelper.colorSelect(img)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    b.findCorner(img,'bottomleft')
+    b = Border()
+    b.lineInterceptForm((1,0), 3, (1,6.3), 2.3)
+    
+    
 if __name__ == '__main__':
     main()
