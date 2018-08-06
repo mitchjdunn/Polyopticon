@@ -13,8 +13,8 @@ class cvHelper:
     #color select white
     def colorSelect(img):
          hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-         lower_white = np.array([0,0,220])
-         upper_white = np.array([255,35,255])
+         lower_white = np.array([0,0,245])
+         upper_white = np.array([255,15,255])
          mask = cv2.inRange(hsv, lower_white, upper_white)
          return cv2.bitwise_and(img,img, mask= mask)
     #color select blue
@@ -23,7 +23,7 @@ class cvHelper:
          lower_blue = np.array([80,80,180])
          upper_blue = np.array([130,255,255])
          mask = cv2.inRange(hsv, lower_blue, upper_blue)
-         cv2.imshow('colorSelect2', cv2.bitwise_and(img,img, mask= mask))
+        # cv2.imshow('colorSelect2', cv2.bitwise_and(img,img, mask= mask))
          return cv2.bitwise_and(img,img, mask= mask)
     def addEdges(img):
         edges = cv2.Canny(img,80,40)
@@ -216,7 +216,7 @@ class WhiteboardView:
         #contours from image
         _,contours,_ = cv2.findContours(img,modes[0], methods[1])
         #sorted by smalles perimeters first
-        #cv2.imshow('detectLED', img)
+        cv2.imshow('detectLED', img)
         contours = sorted(contours, key=lambda x: cv2.arcLength(x, True))
         print(len(contours)) 
     
