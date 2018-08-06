@@ -20,10 +20,10 @@ class cvHelper:
     #color select blue
     def colorSelect2(img):
          hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-         lower_blue = np.array([80,80,180])
+         lower_blue = np.array([80,60,125])
          upper_blue = np.array([130,255,255])
          mask = cv2.inRange(hsv, lower_blue, upper_blue)
-        # cv2.imshow('colorSelect2', cv2.bitwise_and(img,img, mask= mask))
+         cv2.imshow('colorSelect2', cv2.bitwise_and(img,img, mask= mask))
          return cv2.bitwise_and(img,img, mask= mask)
     def addEdges(img):
         edges = cv2.Canny(img,80,40)
@@ -43,7 +43,7 @@ class WhiteboardView:
         self.penDown = False
         self.lastPen = None
         self.calibrating = False
-        self.framesToSkip = 5
+        self.framesToSkip = 10
         self.corners = 0
         self.video = False
         self.ports = [4545,4546,4547,4548]
@@ -113,13 +113,13 @@ class WhiteboardView:
                 if not self.calibrating:
                     self.p.calibNW()
                     self.calibrating = True
-                    self.framesToSkip = 5
+                    self.framesToSkip = 10
                 if self.framesToSkip == 0:
                     if self.border.findCorner(img1, 'topleft'):
                         print('found nw')
                         self.corners += 1
                         self.calibrating = False
-                        self.framesToSkip = 5
+                        self.framesToSkip = 10
                 else:
                     self.framesToSkip -=1
             elif self.corners == 1:
@@ -128,13 +128,13 @@ class WhiteboardView:
                 if not self.calibrating:
                     self.p.calibNE()
                     self.calibrating = True
-                    self.framesToSkip = 5
+                    self.framesToSkip = 10
                 if self.framesToSkip == 0:
                     if self.border.findCorner(img1, 'topright'):
                         self.calibrating = False
                         print('found ne')
                         self.corners += 1
-                        self.framesToSkip = 5
+                        self.framesToSkip = 10
                 else:
                     self.framesToSkip -=1
             elif self.corners == 2:
@@ -203,7 +203,7 @@ class WhiteboardView:
             if self.prod:
                 if self.penDown:
                     self.upcount +=1
-                    if self.upcount > 10:
+                    if self.upcount > 5:
                         self.up()
 
         if self.debug:
