@@ -172,11 +172,11 @@ class Paint(object):
         self.currentColor = 0
         self.root = Tk()
         self.slavesocket = None
-        self.colors = ['red', 'blue', 'white', 'green', 'purple', 'orange']
+        self.colors = ['red', 'blue', 'green', 'purple', 'orange']
         self.sizes = [1, 3, 5, 8, 10, 20]
         self.currentSize = 0
 
-        self.canvas = Canvas(self.root, bg='black')# , width=600, height=600)
+        self.canvas = Canvas(self.root, bg='black', highlightthickness=0)# , width=600, height=600)
         self.canvas.pack(fill=BOTH, expand=YES, padx = 0, pady = 0)
         
         self.addCanvasButtons()
@@ -268,25 +268,25 @@ class Paint(object):
         self.addCanvasButtons()
 
     def addCanvasButtons(self):
-        self.penButton = Button(self.root, text='pen', command=self.usePen, bg="dark blue", fg = "white")
+        self.penButton = Button(self.root, text='pen', command=self.usePen, bg="dark blue", fg = "white", highlightthickness=0, activebackground="light blue")
         self.penButton.configure(width = 10, height = 6, bd=0) 
         self.penButtonX = 10 
         self.penButtonY = 10
         self.canvas.create_window(10, 10, anchor=NW, window=self.penButton)
 
-        self.colorButton = Button(self.root, text='color', command=self.chooseColor, bg="dark blue", fg = "white")
+        self.colorButton = Button(self.root, text='color', command=self.chooseColor, bg="dark blue", fg = "white", highlightthickness=0, activebackground="light blue")
         self.colorButton.configure(width = 10, height = 6, bd = 0) 
         self.colorButtonX = 10
         self.colorButtonY = 90
         self.canvas.create_window(10, 90, anchor=NW, window=self.colorButton)
 
-        self.eraserButton = Button(self.root, text='eraser', command=self.useEraser, bg="dark blue", fg = "white")
+        self.eraserButton = Button(self.root, text='eraser', command=self.useEraser, bg="dark blue", fg = "white", highlightthickness=0, activebackground="light blue")
         self.eraserButton.configure(width = 10, bd = 0, height = 6)
         self.eraserButtonX = 10 
         self.eraserButtonY = 170 
         self.canvas.create_window(10, 170, anchor=NW, window=self.eraserButton)
 
-        self.sizeButton = Button(self.root, text='Size (1)', command=self.changeSize, bg="dark blue", fg = "white")
+        self.sizeButton = Button(self.root, text='Size (1)', command=self.changeSize, bg="dark blue", fg = "white", highlightthickness=0, activebackground="light blue")
         self.sizeButton.configure(width = 10, bd = 0, height = 6)
         self.sizeButtonX = 10 
         self.sizeButtonY = 250 
