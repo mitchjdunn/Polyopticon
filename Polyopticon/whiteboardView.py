@@ -203,7 +203,7 @@ class WhiteboardView:
             if self.prod:
                 if self.penDown:
                     self.upcount +=1
-                    if self.upcount > 10:
+                    if self.upcount > 5:
                         self.up()
 
         if self.debug:
