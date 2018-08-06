@@ -415,7 +415,8 @@ class Paint(object):
     def changeSize(self):
         self.currentSize = (self.currentSize + 1) % len(self.sizes)
         self.sizeButton.configure(text="Size ({})".format(self.sizes[self.currentSize]))
-        self.sendToSlave('size,{}'.format(self.sizes[self.currentSize]))
+        if self.master:
+            self.sendToSlave('size,{}'.format(self.sizes[self.currentSize]))
 
     def setup(self):
         self.oldX = None
@@ -444,6 +445,7 @@ class Paint(object):
     def chooseColor(self):
         self.eraserOn = False
         self.color = (self.color + 1) % len(self.colors)
+        self.colorButton.configure(bg = self.colors[self.color])
         self.sendToSlave('color,{}'.format(self.color))
 
     def activateButton(self, some_button):
@@ -484,6 +486,7 @@ class Paint(object):
     # Setter for pensize
     def setSize(self, size):
         self.lineWidth = int(size)
+        self.sizeButton.configure(text="Size ({})".format(self.sizes[self.currentSize]))
 
     # setter for pen color
     def setColor(self, color): 
