@@ -145,7 +145,7 @@ class Border:
             print('txavg:{}'.format(txavg))
             print('bxavg:{}'.format(bxavg))
             print('ryavg:{}'.format(ryavg))
-        return [(txavg + bxavg) /2,(lyavg + ryavg) /2]
+        return [txavg ,lyavg]
 
     def inBorder(self, point):
         p = []

@@ -202,9 +202,7 @@ class WhiteboardView:
                 print('No LED')
             if self.prod:
                 if self.penDown:
-                    self.upcount +=1
-                    if self.upcount > 5:
-                        self.up()
+                    self.up()
 
         if self.debug:
             cv2.imshow('img2', img2)
@@ -223,7 +221,7 @@ class WhiteboardView:
         #cycle through contours to find LED
         for c in contours:
             #weed out contours that are too large or too small
-            if cv2.arcLength(c, False) < 20 or cv2.arcLength(c, True) > 60:
+            if cv2.arcLength(c, False) < 10 or cv2.arcLength(c, True) > 60:
                 continue
             #smallest circle closing the contour
             (x,y),_ = cv2.minEnclosingCircle(c)
