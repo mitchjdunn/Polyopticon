@@ -122,11 +122,13 @@ class Border:
 
     def getPositionOfPoint(self, point):
         # get x position from intercept with top line
+        #a is the coefficients of the variables in a system of equation determined by the intersect formula of 2 lines
+        # two lines are from topLeft point with topslope and the given point and 1/topslope
         a = np.array([[1.0, -1.0/self.topslope], [1.0, float(-self.topslope)]]) 
         b = np.array([float(point[1]) - (1.0/self.topslope) * float(point[0]) ,float(self.topLeft[1] - (self.topslope * self.topLeft[0]))])
-        #X is equal to the x position of the intersect of the top line and a line from point with a slope perpendicular to the top line.
         xPosTop = np.linalg.solve(a,b)[1]
          # get x position from intercept with bottom line
+        
         a = np.array([[1.0, -1.0/self.bottomslope], [1.0, float(-self.bottomslope)]]) 
         b = np.array([float(point[1]) - (1.0/self.bottomslope) * float(point[0]) ,float(self.bottomLeft[1] - (self.bottomslope * self.bottomLeft[0]))])
         xPosBottom = np.linalg.solve(a,b)[1]
@@ -135,11 +137,11 @@ class Border:
 
         #Y position
         # get y position from intercept with left line
-        a = np.array([[1.0, float(-self.leftslope)], [1.0, -1.0/self.leftslope]]) 
-        b = np.array([float(point[1])   - float(self.leftslope) * float(point[0]) ,float(self.topLeft[1]) - ((1.0/self.leftslope) * self.topLeft[0])])
+        a = np.array([[1.0, -1.0/self.leftslope], [1.0, -1 * self.leftslope]]) 
+        b = np.array([float(point[1]) -1.0/self.leftslope * point[0] ,float(self.topLeft[1]) - (self.leftslope) * self.topLeft[0]])
         yPosLeft = np.linalg.solve(a,b)[0]
-        a = np.array([[1.0, float(-self.rightslope)], [1.0, -1.0/self.rightslope]]) 
-        b = np.array([float(point[1])   - float(self.rightslope) * float(point[0]) ,float(self.topRight[1]) - ((1.0/self.leftslope) * self.topRight[0])])
+        a = np.array([[1.0, -1.0/self.rightslope], [1.0, -1.0*self.rightslope]]) 
+        b = np.array([float(point[1]) -1.0/self.rightslope * point[0] ,float(self.topRight[1]) - (self.rightslope) * self.topRight[0]])
         yPosRight = np.linalg.solve(a,b)[0]
         #normalize -- subtract from the orign
         txavg=abs(xPosTop - self.topLeft[0]) * 100 / self.topwidth
@@ -147,10 +149,14 @@ class Border:
         lyavg=abs(yPosLeft - self.topLeft[1]) * 100/ self.leftheight
         ryavg=abs(yPosRight - self.topRight[1]) * 100/ self.rightheight
         if self.debug:
+            print(xPosTop)
+            print(xPosBottom)
+            print(yPosLeft)
+            print(yPosRight)
             print('txavg:{}'.format(txavg))
             print('bxavg:{}'.format(bxavg))
-            print('ryavg:{}'.format(ryavg))
             print('lyavg:{}'.format(lyavg))
+            print('ryavg:{}'.format(ryavg))
         return [float(txavg + bxavg) /2, float(lyavg + ryavg) /2]
 
     def inBorder(self, point):
