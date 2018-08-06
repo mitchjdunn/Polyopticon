@@ -272,25 +272,25 @@ class Paint(object):
         self.penButton.configure(width = 10, height = 6, bd=0) 
         self.penButtonX = 10 
         self.penButtonY = 10
-        self.canvas.create_window(10, 10, anchor=NW, window=self.penButton)
+        self.canvas.create_window(10, self.penButtonY, anchor=NW, window=self.penButton)
 
         self.colorButton = Button(self.root, text='color', command=self.chooseColor, bg="dark blue", fg = "white", highlightthickness=0, activebackground="light blue")
         self.colorButton.configure(width = 10, height = 6, bd = 0) 
         self.colorButtonX = 10
         self.colorButtonY = 140
-        self.canvas.create_window(10, 90, anchor=NW, window=self.colorButton)
+        self.canvas.create_window(10, self.colorButtonY, anchor=NW, window=self.colorButton)
 
         self.eraserButton = Button(self.root, text='eraser', command=self.useEraser, bg="dark blue", fg = "white", highlightthickness=0, activebackground="light blue")
         self.eraserButton.configure(width = 10, bd = 0, height = 6)
         self.eraserButtonX = 10 
         self.eraserButtonY = 270 
-        self.canvas.create_window(10, 170, anchor=NW, window=self.eraserButton)
+        self.canvas.create_window(10, self.eraserButtonY, anchor=NW, window=self.eraserButton)
 
         self.sizeButton = Button(self.root, text='Size (1)', command=self.changeSize, bg="dark blue", fg = "white", highlightthickness=0, activebackground="light blue")
         self.sizeButton.configure(width = 10, bd = 0, height = 6)
         self.sizeButtonX = 10 
         self.sizeButtonY = 400
-        self.canvas.create_window(10, 250, anchor=NW, window=self.sizeButton)
+        self.canvas.create_window(10, self.sizeButtonY, anchor=NW, window=self.sizeButton)
 
     def insert64image(self, base64string):
         fh = open('temp.png', 'wb')
