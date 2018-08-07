@@ -23,7 +23,7 @@ class cvHelper:
          lower_blue = np.array([80,60,125])
          upper_blue = np.array([130,255,255])
          mask = cv2.inRange(hsv, lower_blue, upper_blue)
-         cv2.imshow('colorSelect2', cv2.bitwise_and(img,img, mask= mask))
+         # cv2.imshow('colorSelect2', cv2.bitwise_and(img,img, mask= mask))
          return cv2.bitwise_and(img,img, mask= mask)
     def addEdges(img):
         edges = cv2.Canny(img,80,40)
@@ -214,7 +214,7 @@ class WhiteboardView:
         #contours from image
         _,contours,_ = cv2.findContours(img,modes[0], methods[1])
         #sorted by smalles perimeters first
-        cv2.imshow('detectLED', img)
+        # cv2.imshow('detectLED', img)
         contours = sorted(contours, key=lambda x: cv2.arcLength(x, True))
         print(len(contours)) 
     
@@ -265,7 +265,8 @@ class WhiteboardView:
                 #data is the image recieved from the stream converted for opencv
                 data = np.fromstring(stream.getvalue(), dtype=np.uint8)
                 img = cv2.imdecode(data,1)
-                cv2.imshow('original', img)
+
+                #cv2.imshow('original', img)
                 self.nextFrame(img) 
             except Exception as e:
                 print("Socket Error: whiteboardView.whiteboardView.runVideo")
