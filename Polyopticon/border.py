@@ -64,7 +64,7 @@ class Border:
             rect = cv2.minAreaRect(c)
             box= cv2.boxPoints(rect)
             box = np.int0(box)
-            cv2.imshow('c', cv2.drawContours(img1, [box], 0, (0,255,255), 3))
+            # cv2.imshow('c', cv2.drawContours(img1, [box], 0, (0,255,255), 3))
             #cv2.waitKey(0)
             box = tuple([tuple([int(x) - int(x) % 2, int(y) - int(y) % 2]) for x,y in box])
 

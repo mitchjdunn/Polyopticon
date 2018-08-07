@@ -2,7 +2,7 @@
 
 from tkinter import *
 import io
-from tkinter.filedialog import askopenfilename, asksaveasfile
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 from PIL import Image, ImageTk
 import threading
 import socket 
@@ -193,13 +193,14 @@ class Paint(object):
             self.menubar = Menu(self.root)
         
             self.filemenu = Menu(self.menubar, tearoff=0)
+            self.filemenu.add_command(label="Save Presentation Video", command=self.saveAction)
             self.filemenu.add_command(label="Clear Board", command=self.clearDrawButton)
             self.filemenu.add_command(label="Recalibrate", command=self.recalibrate)
             self.filemenu.add_separator()
             self.filemenu.add_command(label="Upload Picture", command=self.insertImage)
             self.filemenu.add_command(label="Save Picture", command=self.saveCanvasToFile)
             self.filemenu.add_separator()
-            self.filemenu.add_command(label="Exit", command=self.root.quit)
+            self.filemenu.add_command(label="Exit", command=self.close)
             self.menubar.add_cascade(label="File", menu=self.filemenu)
             
             if self.debug:
@@ -217,6 +218,10 @@ class Paint(object):
             threading.Thread(target = self.waitForMaster, args=[self.d] ).start()
 
 
+    def saveAction(self):
+        fp = asksaveasfilename(mode='w', defaultextension='.avi')
+        self.w.save(fp)
+
     def recalibrate(self):
         if not self.w is None:
             self.w.recalibrate()
@@ -232,7 +237,7 @@ class Paint(object):
             self.sendToSlave('calib,nw')
         self.root.update()
         self.fullClearCanvas()
-        self.canvas.create_rectangle(10, 10, 110, 110, fill='dark blue')
+        self.canvas.create_rectangle(10, 10, 110, 110, fill='blue')
         self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
 
     def calibSW(self):
@@ -241,7 +246,7 @@ class Paint(object):
             
         self.root.update()
         self.fullClearCanvas()
-        self.canvas.create_rectangle(10, self.canvas.winfo_height() - 110, 110, self.canvas.winfo_height() - 10, fill='dark blue')
+        self.canvas.create_rectangle(10, self.canvas.winfo_height() - 110, 110, self.canvas.winfo_height() - 10, fill='blue')
         self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
         
     def calibSE(self):
@@ -249,7 +254,7 @@ class Paint(object):
             self.sendToSlave('calib,se')
         self.root.update()
         self.fullClearCanvas()
-        self.canvas.create_rectangle( self.canvas.winfo_width() - 110, self.canvas.winfo_height() - 110, self.canvas.winfo_width() - 10, self.canvas.winfo_height() - 10, fill='dark blue')
+        self.canvas.create_rectangle( self.canvas.winfo_width() - 110, self.canvas.winfo_height() - 110, self.canvas.winfo_width() - 10, self.canvas.winfo_height() - 10, fill='blue')
         self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
 
     def calibNE(self):
@@ -257,7 +262,7 @@ class Paint(object):
             self.sendToSlave('calib,ne')
         self.root.update()
         self.fullClearCanvas()
-        self.canvas.create_rectangle(self.canvas.winfo_width() - 110, 10, self.canvas.winfo_width() - 10, 110, fill='dark blue')
+        self.canvas.create_rectangle(self.canvas.winfo_width() - 110, 10, self.canvas.winfo_width() - 10, 110, fill='blue')
         self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
 
     def doneCalib(self):
@@ -266,7 +271,7 @@ class Paint(object):
         self.fullClearCanvas()
         # self.canvas.pack(fill=BOTH, expand=YES, padx=0, pady=10)
         self.addCanvasButtons()
-
+    
     def addCanvasButtons(self):
         self.penButton = Button(self.root, text='pen', command=self.usePen, bg="dark blue", fg = "white", highlightthickness=0, activebackground="light blue")
         self.penButton.configure(width = 10, height = 6, bd=0) 
@@ -396,6 +401,8 @@ class Paint(object):
                 
             
     def close(self):
+        self.root.quit()
+        
         if self.master:
             self.broadcast.close()
             try:
