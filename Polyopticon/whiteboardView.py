@@ -252,7 +252,7 @@ class WhiteboardView:
             print("runVideo")
         connection = self.s.makefile('rb')
         fourcc = cv2.VideoWriter_fourcc(*'XVID') 
-        self.videoWriter = cv2.VideoWriter('whiteboardVideo.avi', fourcc, 30, (1280,720))
+        self.videoWriter = cv2.VideoWriter('whiteboardVideo.avi', fourcc, 15, (1280,720))
         while True:
             try:
                 #Socket first sends how long the image will be
