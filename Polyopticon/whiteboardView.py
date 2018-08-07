@@ -48,6 +48,7 @@ class WhiteboardView:
         self.video = False
         self.ports = [4545,4546,4547,4548]
         self.s = socket.socket()
+        self.videoName = None
 
 
         #Socket for video stream
@@ -241,12 +242,15 @@ class WhiteboardView:
         self.calibrating = False
         self.corners = 0
     #this method reads images sent over a socket via the slave whiteboard.
+    def save(self, filePath):
+        self.videoName = filePath
 
     def runVideo(self):
         self.connect()
         if self.debug:
             print("runVideo")
         connection = self.s.makefile('rb')
+        videoWriter = cv2.VideoWriter('whiteboardVideo.avi', -1, 30, (1280,720))
         while True:
             try:
                 #Socket first sends how long the image will be
@@ -266,6 +270,7 @@ class WhiteboardView:
                 data = np.fromstring(stream.getvalue(), dtype=np.uint8)
                 img = cv2.imdecode(data,1)
                 cv2.imshow('original', img)
+                videoWriter.write(img)
                 self.nextFrame(img) 
             except Exception as e:
                 print("Socket Error: whiteboardView.whiteboardView.runVideo")
@@ -292,6 +297,10 @@ class WhiteboardView:
 
     def close(self):
         self.s.close()
+        if self.videoName is None:
+            os.remove('output.avi')    
+        else:
+            os.rename('output.avi', self.videoName)
         cv2.DestroyAllWindows()
         
 def main():
