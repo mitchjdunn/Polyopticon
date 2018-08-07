@@ -2,7 +2,7 @@
 
 from tkinter import *
 import io
-from tkinter.filedialog import askopenfilename, asksaveasfile
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 from PIL import Image, ImageTk
 import threading
 import socket 
@@ -193,6 +193,7 @@ class Paint(object):
             self.menubar = Menu(self.root)
         
             self.filemenu = Menu(self.menubar, tearoff=0)
+            self.filemenu.add_command(label="Save Presentation Video", command=self.saveAction)
             self.filemenu.add_command(label="Clear Board", command=self.clearDrawButton)
             self.filemenu.add_command(label="Recalibrate", command=self.recalibrate)
             self.filemenu.add_separator()
@@ -216,6 +217,10 @@ class Paint(object):
             self.d = DrawSocket(self, debug=self.debug)
             threading.Thread(target = self.waitForMaster, args=[self.d] ).start()
 
+
+    def saveAction(self):
+        fp = asksaveasfilename(mode='w', defaultextension='.avi')
+        self.w.save(fp)
 
     def recalibrate(self):
         if not self.w is None:
