@@ -219,7 +219,7 @@ class Paint(object):
 
 
     def saveAction(self):
-        fp = asksaveasfilename(mode='w', defaultextension='.avi')
+        fp = asksaveasfilename( defaultextension='.avi')
         self.w.save(fp)
 
     def recalibrate(self):
