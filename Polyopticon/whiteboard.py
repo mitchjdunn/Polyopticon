@@ -22,6 +22,7 @@ class VideoSocket():
 
     def close(self):
         self.s.close()
+
     def bind(self):
         for port in self.ports:
             try:
@@ -183,6 +184,8 @@ class Paint(object):
         self.root.config(background="dark blue")
 
         self.history = ""
+
+        self.root.protocol("WM_DELETE_WINDOW", self.close)
 
         self.w = None
         if self.debug:
@@ -401,17 +404,25 @@ class Paint(object):
                 
             
     def close(self):
-        self.root.quit()
+        print('closing app')
+        self.root.destroy()
         
-        if self.master:
+        try:
             self.broadcast.close()
-            try:
-                self.w.close()
-            except:
-                pass
-        else:
+        except:
+            pass
+        try:
+            self.w.close()
+        except:
+            pass
+        try:
             self.d.close()
+        except:
+            pass
+        try:
             self.v.close()
+        except:
+            pass
         
     def startLoop(self): 
         self.setup()
