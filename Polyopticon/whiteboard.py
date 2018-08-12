@@ -72,8 +72,10 @@ class VideoSocket():
             connection.close()
             self.s.close()
 
+# Socket to listen to commands from master.
 class DrawSocket(object): 
     def __init__(self, paint, debug=False):
+
         # Setup server socket
         self.debug = debug
         self.paint = paint
@@ -82,6 +84,7 @@ class DrawSocket(object):
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.serverSocket.bind(('0.0.0.0', self.port))
+
         # listen for clients in another thread
         threading.Thread(target = self.listen).start()
         # self.listen()
@@ -117,6 +120,7 @@ class DrawSocket(object):
                 string = data.decode("utf-8")
                 lines = string.split(sep='\n')
 
+                # did not receive an entire line, add it to the next received packet
                 if not string.endswith('\n'):
                     if self.debug:
                         print("adding line to next buffer")
@@ -125,6 +129,7 @@ class DrawSocket(object):
                 else:
                     data = b''
 
+                # send each line to the whiteboard for processing
                 for line in lines:
                     self.paint.handle(line)
 
@@ -139,6 +144,7 @@ class DrawSocket(object):
     def socketConnected(self):
         return self.connected
     
+# Socket for the master to listen for broadcasts from slaves starting up 
 class BroadcastListener(object): 
     def __init__(self, paint, debug=False):
         self.debug= debug 
@@ -148,6 +154,8 @@ class BroadcastListener(object):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
         self.client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.client.bind(("", 15272))
+
+        # start the actual listening part in a new thread
         threading.Thread(target = self.listen).start()
 
     def listen(self):
@@ -163,6 +171,7 @@ class BroadcastListener(object):
 class Paint(object):
 
     def __init__(self, master=False, debug=False):
+        # set up some vars
         self.debug = debug
         self.slaveAttached = False
         self.slaveIP = None
@@ -190,6 +199,7 @@ class Paint(object):
         self.w = None
         if self.debug:
             print("setting up socket")
+        # add different menus based on if the whiteboard is a slave or a master
         if master: 
             self.broadcast = BroadcastListener(self, debug=self.debug) 
 
@@ -221,20 +231,24 @@ class Paint(object):
             threading.Thread(target = self.waitForMaster, args=[self.d] ).start()
 
 
+    # function called when selected from the menubar
     def saveAction(self):
         fp = asksaveasfilename( defaultextension='.avi')
         self.w.save(fp)
 
+    # the next 8 function are enabling the calibration screens for the image recognition
     def recalibrate(self):
         if not self.w is None:
             self.w.recalibrate()
 
+    # clear the white board of EVERYTHING
     def fullClearCanvas(self):
         self.clearDrawing()
         self.canvas.delete("all")
         self.canvas.pack(fill=BOTH, expand=YES, padx=0, pady=0)
         self.canvas.create_rectangle(0, 0, self.canvas.winfo_width(), self.canvas.winfo_height(), fill='black')
     
+    # calibration box in the north west
     def calibNW(self):
         if self.master:
             self.sendToSlave('calib,nw')
@@ -243,6 +257,7 @@ class Paint(object):
         self.canvas.create_rectangle(10, 10, 110, 110, fill='blue')
         self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
 
+    # calibration box in the south west
     def calibSW(self):
         if self.master:
             self.sendToSlave('calib,sw')
@@ -252,6 +267,7 @@ class Paint(object):
         self.canvas.create_rectangle(10, self.canvas.winfo_height() - 110, 110, self.canvas.winfo_height() - 10, fill='blue')
         self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
         
+    # calibration box in the south east
     def calibSE(self):
         if self.master:
             self.sendToSlave('calib,se')
@@ -260,6 +276,7 @@ class Paint(object):
         self.canvas.create_rectangle( self.canvas.winfo_width() - 110, self.canvas.winfo_height() - 110, self.canvas.winfo_width() - 10, self.canvas.winfo_height() - 10, fill='blue')
         self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
 
+    # calibration box in the north east
     def calibNE(self):
         if self.master:
             self.sendToSlave('calib,ne')
@@ -268,6 +285,7 @@ class Paint(object):
         self.canvas.create_rectangle(self.canvas.winfo_width() - 110, 10, self.canvas.winfo_width() - 10, 110, fill='blue')
         self.canvas.create_text(self.canvas.winfo_width() / 2, 200, font=('Courier', 32), text="CALIBRATING...", fill="yellow")
 
+    # reset the whiteboard to take normal user input 
     def doneCalib(self):
         if self.master:
             self.sendToSlave('calib,done')
@@ -275,6 +293,7 @@ class Paint(object):
         # self.canvas.pack(fill=BOTH, expand=YES, padx=0, pady=10)
         self.addCanvasButtons()
     
+    # add the buttons (back) to the canvas
     def addCanvasButtons(self):
         self.penButton = Button(self.root, text='pen', command=self.usePen, bg="dark blue", fg = "white", highlightthickness=0, activebackground="light blue")
         self.penButton.configure(width = 10, height = 6, bd=0) 
@@ -300,6 +319,7 @@ class Paint(object):
         self.sizeButtonY = 400
         self.canvas.create_window(10, self.sizeButtonY, anchor=NW, window=self.sizeButton)
 
+    # insert a base64 encoded image to the whiteboard
     def insert64image(self, base64string):
         fh = open('temp.png', 'wb')
         fh.write(base64.b64decode(base64string))
@@ -325,10 +345,13 @@ class Paint(object):
         self.canvasimage = ImageTk.PhotoImage(image)
         self.canvas.create_image(110, 0, image=self.canvasimage, anchor=NW)
         
+    # Function for user specified picture
+    # gets called from the menubar
     def insertImage(self):
         filename = askopenfilename()
         self.insertImageHelper(filename)
         
+    # helper method used by the other two insertImage functions
     def insertImageHelper(self, filename):
         image = Image.open(filename)
         self.root.update()
@@ -358,6 +381,7 @@ class Paint(object):
                 print('b64 image: {}'.format(b64image))
                 self.sendToSlave('image,{}'.format(b64image))
 
+    # exports the current whiteboard drawing to the 
     def saveCanvasToFile(self):
         ps = self.canvas.postscript(file='export.ps', colormode = 'color')
         ps = self.canvas.postscript(colormode = 'color')
@@ -370,6 +394,9 @@ class Paint(object):
         im = Image.open(io.BytesIO(ps.encode('utf-8')))
         im.save(f, quality=99)
 
+    # Sends the broadcast packet over and over (every second)  until a master connects itself
+    # broadcasts stop when a master is connected but resumed if the master is ever disconnected
+    # this allows for easy reconnection if the connection to the master is lost for some reason
     def waitForMaster(self, drawsocket):
         broadcast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
         broadcast.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
@@ -387,6 +414,8 @@ class Paint(object):
             while drawsocket.socketConnected():
                 sleep(1)
         
+    # Method to send mesages to the slaves
+    # steps through the send queue and remembers the position and sends anything if theres anything waiting
     def slaveSendThread(self, socket):
         currentPos = 0
         while True:
@@ -403,6 +432,7 @@ class Paint(object):
                     return
                 
             
+    # called when tkinter is closed
     def close(self):
         print('closing app')
         self.root.destroy()
@@ -424,18 +454,23 @@ class Paint(object):
         except:
             pass
         
+    # starts the main TK loop
+    # needs to be in the main thread but some other stuff needs to happen first
+    # so this was seperated into a new method to call last
     def startLoop(self): 
         self.setup()
         self.root.update()
         self.canvas.create_rectangle(0, 0, 4000, 4000, fill='black')
         self.root.mainloop()
         
+    # Called when the size button on the screen is pressed
     def changeSize(self):
         self.currentSize = (self.currentSize + 1) % len(self.sizes)
         self.sizeButton.configure(text="Size ({})".format(self.sizes[self.currentSize]))
         if self.master:
             self.sendToSlave('size,{}'.format(self.sizes[self.currentSize]))
 
+    # Sets up the tkinter interface 
     def setup(self):
         self.oldX = None
         self.oldY = None
@@ -450,27 +485,33 @@ class Paint(object):
             self.v = VideoSocket(debug=self.debug)
             threading.Thread(target = self.v.sendImages).start()            
         
+    # This function called when the pen button is pressed 
     def usePen(self):
         self.eraserOn = False
         self.color = (self.color + 1) % len(self.colors)
         self.activateButton = self.penButton
 
+    # called when the user switchs to eraser with the button
     def useEraser(self):
         self.eraserOn = True
         self.sendToSlave('color,black')
         self.activateButton = self.eraserButton
 
+    # rotates the color of the pen when the button is pressed
     def chooseColor(self):
         self.eraserOn = False
         self.color = (self.color + 1) % len(self.colors)
         self.colorButton.configure(bg = self.colors[self.color])
         self.sendToSlave('color,{}'.format(self.color))
 
+    # changes the active (depressed) button
+    # this is brokent I think, or doesnt do anything
     def activateButton(self, some_button):
         self.activateButton.config(relief=RAISED)
         some_button.config(relief=SUNKEN)
         self.activateButton = some_button
 
+    # this is the method called with mouse-1 pressed on the canvas
     def paint(self, event):
         self.lineWidth = self.sizes[self.currentSize]
         paintColor = 'black' if self.eraserOn else self.colors[self.color]
@@ -497,6 +538,8 @@ class Paint(object):
         self.oldX = event.x
         self.oldY = event.y
 
+    # called when mouse 1 is realased
+    # resets the variables tracking mouse positions 
     def reset(self, event):
         self.oldX, self.oldY = None, None
         self.sendToSlave('up')
@@ -510,6 +553,8 @@ class Paint(object):
     def setColor(self, color): 
         self.color = color
 
+    # converts numbers from 0 to 100 to the pixels on the screen
+    # this makes resolution of the whiteboards irrelevant 
     def normalizedDrawLine(self, fromX, fromY, toX, toY):
         self.root.update()
         w = float(self.canvas.winfo_width())
@@ -532,6 +577,7 @@ class Paint(object):
                                capstyle=ROUND, smooth=TRUE, splinesteps=36)
 
     # x and y are the normalized coordinates 
+    # checks for button input from the openCV calls
     def checkForButtonPress(self, x, y):
         x = float(x)
         y = float(y)
@@ -577,6 +623,7 @@ class Paint(object):
 
         return False
 
+    # helper to calculate if a point in normalized form is in a box in pixels
     def normalizedPointInBox(self, nx, ny, x, y, x2, y2):
         # make sure canvas width/height are up to date 
         self.root.update()
@@ -591,15 +638,18 @@ class Paint(object):
 
         return nx > x and nx < x2 and ny > y and ny < y2 
         
+    # called when the clear drawing button is pressed from the menubar
     def clearDrawButton(self):
         self.clearDrawing()
         if self.master:
             self.sendToSlave('clear')
 
+    # Clears the drawing only, not buttons
     def clearDrawing(self):
         self.root.update()
         self.canvas.create_rectangle(0, 0, 4000, 4000, fill='black')
 
+    # handles the opencv and network input messages
     def handle(self, line):
         if line.rstrip() is '':
             return
@@ -675,6 +725,7 @@ class Paint(object):
                 print('- unknown message')
             
 
+    # prepares a string to be sent over the network to the slaves
     def sendToSlave(self, line): 
         line = line.rstrip() + '\n'
         self.sendQueue.append(str.encode(line))
