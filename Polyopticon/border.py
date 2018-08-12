@@ -4,7 +4,7 @@ import numpy as np
 import math
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-import collections
+# this class is called and managed by whiteboardView and houses all information and methods used with finding the boarder
 class Border:
 
     def __init__(self, debug =False):
@@ -32,12 +32,9 @@ class Border:
         self.topRight = []
         self.bottomLeft = []
         self.bottomRight = []
-        #list of coordinates for corners of rectangle. counted for assurance 
-        self.potentialBorder = collections.Counter()
-        self.minBorderThreshold = 10
-
     
     #Takes in image and looks for corner squares for finding border
+    # param img is the binary (greyscaled) image
     #return true if found, false if not
     def findCorner(self,img, descriptor):
         if self.debug:
@@ -53,63 +50,52 @@ class Border:
             if self.debug:
                 print('no contours')
                 return
+        # sort contours by larges perimeters to smallest
         contours = sorted(contours, key=lambda x: cv2.arcLength(x, False), reverse=True)
         
-        for c in contours:
-            poly = cv2.approxPolyDP(c, 25, True)
-            print(poly)
-                #if not self.inBorder(x):
-                #    continue
-            
-            rect = cv2.minAreaRect(c)
-            box= cv2.boxPoints(rect)
-            box = np.int0(box)
-            # cv2.imshow('c', cv2.drawContours(img1, [box], 0, (0,255,255), 3))
-            #cv2.waitKey(0)
-            box = tuple([tuple([int(x) - int(x) % 2, int(y) - int(y) % 2]) for x,y in box])
+        rect = cv2.minAreaRect(c)
+        box= cv2.boxPoints(rect)
+        box = np.int0(box)
 
-            print(box)
-            if descriptor is 'topright':
-                print('topright')
-                print(sorted(sorted(box)[2:], key = lambda x : x[1])[0])
-                self.topRight =  sorted(sorted(box)[2:], key = lambda x : x[1])[0]
-                return True
-            elif descriptor is 'topleft':
-                print('topleft')
-                print(sorted(sorted(box)[:2], key = lambda x : x[1])[0])
-                self.topLeft = sorted(sorted(box)[:2], key = lambda x : x[1])[0]
-                return True
-            elif descriptor is 'bottomright':
-                print('bottomright')
-                print(sorted(sorted(box)[2:], key = lambda x : x[1])[1])
-                self.bottomRight =sorted(sorted(box)[2:], key = lambda x : x[1])[1] 
-                self.setBorder((self.topRight,self.topLeft,self.bottomLeft, self.bottomRight))
-                return True
-            elif descriptor is 'bottomleft':
-                print('bottomleft')
-                print(sorted(sorted(box)[:2], key = lambda x : x[1])[1])
-                self.bottomLeft=sorted(sorted(box)[:2], key = lambda x : x[1])[1]
-                return True
-            else:
-                print('descriptor invalid')
-                return False
-            #TODO remove
-            img1 = cv2.cvtColor(img.copy(), cv2.COLOR_GRAY2BGR)
-            img1 = cv2.drawContours(img1, [poly],-1, (255,0,0), 3)
-            #cv2.waitKey(0)
         
-        return False
+        box = tuple([tuple([int(x) - int(x) % 2, int(y) - int(y) % 2]) for x,y in box])
+
+        print(box)
+        #Grab the correct corner of the box to determin which corner of the border was found
+        if descriptor is 'topright':
+            print('topright')
+            print(sorted(sorted(box)[2:], key = lambda x : x[1])[0])
+            self.topRight =  sorted(sorted(box)[2:], key = lambda x : x[1])[0]
+            return True
+        elif descriptor is 'topleft':
+            print('topleft')
+            print(sorted(sorted(box)[:2], key = lambda x : x[1])[0])
+            self.topLeft = sorted(sorted(box)[:2], key = lambda x : x[1])[0]
+            return True
+        elif descriptor is 'bottomright':
+            print('bottomright')
+            print(sorted(sorted(box)[2:], key = lambda x : x[1])[1])
+            self.bottomRight =sorted(sorted(box)[2:], key = lambda x : x[1])[1] 
+            self.setBorder((self.topRight,self.topLeft,self.bottomLeft, self.bottomRight))
+            return True
+        elif descriptor is 'bottomleft':
+            print('bottomleft')
+            print(sorted(sorted(box)[:2], key = lambda x : x[1])[1])
+            self.bottomLeft=sorted(sorted(box)[:2], key = lambda x : x[1])[1]
+            return True
+        else:
+            print('descriptor invalid')
+            return False
         
+        
+    # Sets the border coordinates.
+    # receives list of coordinates to set as border boundries
     def setBorder(self, border):
         self.borderboundries = border
         self.borderFound = True
         if self.debug:
             print("setborder({})".format(border))
-        #get points of rectangle
-        #self.topLeft = sorted(sorted(border)[:2], key = lambda x : x[1] )[0]
-        #self.topRight = sorted(sorted(border)[2:], key = lambda x : x[1])[0]
-        #self.bottomLeft  = sorted(sorted(border)[:2], key = lambda x : x[1])[1]
-        #get width height and slope for corner points
+        #get size of border for determining relative position of points
         self.topwidth = math.sqrt((self.topRight[1] - self.topLeft[1])**2 + (self.topRight[0] - self.topLeft[0])**2)
         self.leftheight = math.sqrt((self.bottomLeft[1] - self.topLeft[1])**2 + (self.bottomLeft[0] - self.topLeft[0])**2)
         self.bottomwidth = math.sqrt((self.bottomRight[1] - self.bottomLeft[1])**2 + (self.bottomRight[0] - self.bottomLeft[0])**2)
@@ -120,8 +106,10 @@ class Border:
         self.rightslope = float(self.topRight[1] - self.bottomRight[1]) / (self.topRight[0] - self.bottomRight[0])
         self.leftslope = float(self.topLeft[1] - self.bottomLeft[1]) / (self.topLeft[0] - self.bottomLeft[0])
 
-    def getPositionOfPoint(self, point):
 
+    # returns the relative position of a the point given to the border.  Top right corner is consisdered origin.
+    # param pos is a touple of x,y cooridnates
+    def getPositionOfPoint(self, point):
         #get the x value of the point of intersection
         xPosTop = self.lineInterceptForm(point, 1/self.topslope, self.topLeft, self.topslope)[0] 
          # get x position from intercept with bottom line
@@ -133,6 +121,7 @@ class Border:
         yPosRight = self.lineInterceptForm(point, 1/self.rightslope, self.topRight,self.rightslope)[1]
 
         #normalize -- subtract from the orign
+        # most of this unused --- perspective not quite complete.
         txavg=abs(xPosTop - self.topLeft[0]) / self.topwidth* 100
         bxavg=abs(xPosBottom - self.topLeft[0]) / self.bottomwidth* 100
         lyavg=abs(yPosLeft - self.topLeft[1]) / self.leftheight* 100
@@ -147,6 +136,9 @@ class Border:
             print('ryavg:{}'.format(ryavg))
         return [txavg ,lyavg]
 
+    #Determines if a point is within the border.
+    # param point is a touple of x,y coordinates
+    # returns true if point is in border, false otherwise
     def inBorder(self, point):
         p = []
         for x in [-2, 2]:
@@ -156,7 +148,13 @@ class Border:
                 if not polygon.contains(p):
                     return False
         return True
+    # the line intercept formula used to determine the point of intersect between 2 points and 2 slopes
+    # param point1 is the point of origin of the first line as a tuple x,y coordinate.
+    # param slope1 is the slope of the first line
+    # param point2 is the point of origin of the second line as a tuple x,y coordinate.
+    # param slope2 is the slope of the second line
     def lineInterceptForm(self,point1, slope1, point2, slope2):
+        #uses a system of equations to determ the x and y position of point
         coefficients = np.array([[-slope1, 1], [-slope2, 1]])
         solutions = np.array([point1[1] - slope1 * point1[0], point2[1] - slope2 * point2[0]])
 

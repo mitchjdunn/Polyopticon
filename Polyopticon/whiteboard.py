@@ -405,7 +405,6 @@ class Paint(object):
             
     def close(self):
         print('closing app')
-        self.root.destroy()
         
         try:
             self.broadcast.close()
@@ -413,7 +412,8 @@ class Paint(object):
             pass
         try:
             self.w.close()
-        except:
+        except Exception as e:
+            print(e)
             pass
         try:
             self.d.close()
@@ -423,6 +423,7 @@ class Paint(object):
             self.v.close()
         except:
             pass
+        self.root.destroy()
         
     def startLoop(self): 
         self.setup()
