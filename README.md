@@ -1,6 +1,6 @@
 # Polyopticon
 
-##Usage
+## Usage
 
 All code is written and run with Python3.6
 
@@ -12,7 +12,7 @@ Once this process is started calibration will happen automatically and the user 
 If the camera needs to be adjusted a recalibration can be initiated from the master whiteboard
 
 
-##Dependencies
+## Dependencies
 This project utilizes packages installed from both pip and the OS package manager.
 
 All Systems:
