@@ -15,10 +15,11 @@ If the camera needs to be adjusted a recalibration can be initiated from the mas
 ##Dependencies
 This project utilizes packages installed from both pip and the OS package manager.
 
+All Systems:
 `pip3 install -r requirements.txt`
 
-Ubuntu:
+Ubuntu Based Systems:
 `apt install python3-tk python3-pil python-pil.imagetk`
 
-DNF/YUM:
+RHEL Based Systems:
 `dnf install python3-pillow python3-pillow-tk python3-tkinter`
