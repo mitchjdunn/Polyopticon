@@ -435,7 +435,6 @@ class Paint(object):
     # called when tkinter is closed
     def close(self):
         print('closing app')
-        self.root.destroy()
         
         try:
             self.broadcast.close()
@@ -443,7 +442,8 @@ class Paint(object):
             pass
         try:
             self.w.close()
-        except:
+        except Exception as e:
+            print(e)
             pass
         try:
             self.d.close()
@@ -453,6 +453,7 @@ class Paint(object):
             self.v.close()
         except:
             pass
+        self.root.destroy()
         
     # starts the main TK loop
     # needs to be in the main thread but some other stuff needs to happen first
@@ -752,8 +753,8 @@ class Paint(object):
 
 if __name__ == '__main__':
     print("Setting up tk")
+    p = Paint(master=True, debug=True)
     try:
-        p = Paint(master=True, debug=True)
         #w = WhiteboardView(p, debug=True,prod=True)
         #threading.Thread(target=w.runVideoFromPath, args=('test5.h264',)).start()
         p.startLoop()

@@ -1,23 +1,27 @@
-from time import sleep
-import cv2
-import threading
-import socket
-import numpy as np
+from time import sleep #used to pause thread 
+import cv2 # OpenCV python library
+import socket # used for remote process communication
+import numpy as np # Helps manipulate data given from openCV
 import math
-import io
+import io 
 import struct
 from border import Border
 
 class cvHelper:
 
     #color select white
+    # param img is the image to be maniuplated
+    # returns the image with everything but a specific range of white filtered out
     def colorSelect(img):
          hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
          lower_white = np.array([0,0,245])
          upper_white = np.array([180,15,255])
          mask = cv2.inRange(hsv, lower_white, upper_white)
          return cv2.bitwise_and(img,img, mask= mask)
+
     #color select blue
+    # param img is the image to be maniuplated
+    # returns the image with everything but a specific range of blues filtered out
     def colorSelect2(img):
          hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
          lower_blue = np.array([80,60,125])
@@ -25,14 +29,10 @@ class cvHelper:
          mask = cv2.inRange(hsv, lower_blue, upper_blue)
          # cv2.imshow('colorSelect2', cv2.bitwise_and(img,img, mask= mask))
          return cv2.bitwise_and(img,img, mask= mask)
-    def addEdges(img):
-        edges = cv2.Canny(img,80,40)
-        img = cv2.addWeighted(img, .7, edges, .3,0)
-        return img
 
-
+#This class is created and managed by the master whiteboard
+#It should only be called when a slave whiteboard with a camera is created
 class WhiteboardView:
-
 
     def __init__(self, whiteboard, debug=False, prod=False):
         self.p = whiteboard
@@ -49,13 +49,14 @@ class WhiteboardView:
         self.ports = [4545,4546,4547,4548]
         self.s = socket.socket()
         self.videoName = None
-
-
+        self.videoWriter = None
         #Socket for video stream
         self.videosocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+    # opens socket to camera that is streaming video
     def connect(self):
         sleep(2)
+        # multiple ports incase one is taken
         for port in self.ports:
             try:
                 if self.debug:
@@ -65,28 +66,35 @@ class WhiteboardView:
             except:
                 print('port {} failed'.format(port))
                 pass
-        raise SystemError('failed to connect to all ports')
-
+    
+    # sends up message to master whiteboard
     def up(self):
         self.penDown = False
         self.p.handle('up') 
         self.upcount=0
 
+    #sends down message to master whiteboard
+    # param pos is the position of the LED
     def down(self, pos):
         self.upcount=0
         self.penDown = True
         self.p.handle("down," + str(pos[0]) + ',' + str(pos[1]))
 
+    # sends LED position to master whiteboardd
+    # param pos is the position of the LED
     def newLEDPos(self, pos):
         self.lastPen = pos
         self.p.handle(str(pos[0]) +','+str(pos[1]))
         #draw
 
+    # Some logic to determine what message gets sent to master whiteboard
+    # param LED is the coordinates of the touch
     def sendTouch(self, LED):
         LEDx, LEDy = LED
         if self.penDown:
             #checking distance between pen strokes -- don't want misfires to draw lines
             if self.lastPen is not None:
+                # if lest pen stroke is more than 10 pixels away send up then down to stop lines from being drawn
                 if abs(self.lastPen[0] - LEDx) > 10 or abs(self.lastPen[1] - LEDy) > 10:
                     self.up()
                     self.down((LEDx, LEDy))
@@ -94,7 +102,9 @@ class WhiteboardView:
         else:
             self.down((LEDx, LEDy))
 
-
+    # checks if border is found.  Tries to find it if it is not.
+    # param img is the image to check for boarder
+    # returns true if border is found, false otherwise
     def borderCheck(self,img):
         #CHECKING FOR BORDER
         if self.debug:
@@ -103,11 +113,12 @@ class WhiteboardView:
             self.border = Border(debug=self.debug)
             if self.prod:
                 pass
+        # preps the image recieved to find the corners
         if self.corners < 4:
             img1 = cvHelper.colorSelect2(img.copy())
             img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
 
-            print('corner')
+            # Tells the master whiteboard to display the top left corner
             if self.corners ==0:
                 #topLeft, NW
                 print('nw')
@@ -115,6 +126,7 @@ class WhiteboardView:
                     self.p.calibNW()
                     self.calibrating = True
                     self.framesToSkip = 10
+                # wait a couple of frames to make sure we are detecting the calibration screen
                 if self.framesToSkip == 0:
                     if self.border.findCorner(img1, 'topleft'):
                         print('found nw')
@@ -123,6 +135,7 @@ class WhiteboardView:
                         self.framesToSkip = 10
                 else:
                     self.framesToSkip -=1
+            # Tells the master whiteboard to display the top right corner
             elif self.corners == 1:
                 #topRight, NE
                 print('ne')
@@ -138,6 +151,7 @@ class WhiteboardView:
                         self.framesToSkip = 10
                 else:
                     self.framesToSkip -=1
+            # Tells the master whiteboard to display the bottom left corner
             elif self.corners == 2:
                 #bottomleft, SW
                 print('sw')
@@ -145,6 +159,7 @@ class WhiteboardView:
                     self.p.calibSW()
                     self.calibrating = True
                     self.framesToSkip = 5
+                # wait a couple of frames to make sure we are detecting the calibration screen
                 if self.framesToSkip == 0:
                     if self.border.findCorner(img1, 'bottomleft'):
                         print('found sw')
@@ -152,6 +167,7 @@ class WhiteboardView:
                         self.corners += 1
                 else:
                     self.framesToSkip -=1
+            # Tells the master whiteboard to display the bottom right corner
             elif self.corners == 3:
                 #bottomright, SE
                 print('se')
@@ -159,6 +175,7 @@ class WhiteboardView:
                     self.p.calibSE()
                     self.calibrating = True
                     self.framesToSkip = 5
+                # wait a couple of frames to make sure we are detecting the calibration screen
                 if self.framesToSkip == 0:
                     if self.border.findCorner(img1, 'bottomright'):
                         print('found se')
@@ -172,6 +189,8 @@ class WhiteboardView:
                 print('not checking for border')
             return True
 
+    # Step through the video frame by frame.  Holds the logic of the image recognition
+    # param img is the current frame from the video
     def nextFrame(self, img):
         if self.debug:
             print("next Frame")
@@ -208,6 +227,9 @@ class WhiteboardView:
         if self.debug:
             cv2.imshow('img2', img2)
 
+    # Detects the LED by grabbing all the white and finding the clusters of colored pixels.
+    # param img is the binary (greyscaled) image to find the LED
+    # returns the coordinates of the detected LED1
     def detectLED(self, img):
         #cv modes and methods
         modes=[cv2.RETR_EXTERNAL, cv2.RETR_LIST, cv2.RETR_CCOMP, cv2.RETR_TREE, cv2.RETR_FLOODFILL]
@@ -215,42 +237,50 @@ class WhiteboardView:
         #contours from image
         _,contours,_ = cv2.findContours(img,modes[0], methods[1])
         #sorted by smalles perimeters first
-        # cv2.imshow('detectLED', img)
+        cv2.imshow('detectLED', img)
         contours = sorted(contours, key=lambda x: cv2.arcLength(x, True))
         print(len(contours)) 
     
         #cycle through contours to find LED
         for c in contours:
             #weed out contours that are too large or too small
-            if cv2.arcLength(c, False) < 10 or cv2.arcLength(c, True) > 60:
+            if cv2.arcLength(c, False) < 15 or cv2.arcLength(c, True) > 60:
                 continue
             #smallest circle closing the contour
             (x,y),_ = cv2.minEnclosingCircle(c)
             x = int(x)
             y = int(y)
-            #remove
             #return first in circle. 
             #TODO get more specific?
             if self.border.inBorder((x,y)):
                 return (x,y)
         return None
 
+    # this method sets everything up to be recalibrated.
+    # called by the master whiteboard
     def recalibrate(self):
         self.border = None
         self.penDown = False
         self.lastPen = None
         self.calibrating = False
         self.corners = 0
-    #this method reads images sent over a socket via the slave whiteboard.
+    # this method sets the file path to save the video
+    # called by the master whiteboard
+    # param filePath is the filepath to save the video
     def save(self, filePath):
         self.videoName = filePath
+        print(filePath)
+        sleep(2)
 
+    # this method reads images sent over a socket via the slave whiteboard and calls nextFrame for every frame
     def runVideo(self):
         self.connect()
         if self.debug:
             print("runVideo")
         connection = self.s.makefile('rb')
-        videoWriter = cv2.VideoWriter('whiteboardVideo.mp4', -1, 30, (1280,720))
+        fourcc = cv2.VideoWriter_fourcc(*'XVID') 
+        # how to save the video ##### NO SOUND
+        self.videoWriter = cv2.VideoWriter('whiteboardVideo.avi', fourcc, 15, (1280,720))
         while True:
             try:
                 #Socket first sends how long the image will be
@@ -259,7 +289,6 @@ class WhiteboardView:
                     if self.debug:
                         print("Waiting for imLen")
                     #assume network issues for no imLen
-                    #TODO
                     imLen = struct.unpack('<L', connection.read(struct.calcsize('<L')))[0]
                 if self.debug:
                     print('imLen: {}'.format(imLen))
@@ -270,7 +299,8 @@ class WhiteboardView:
                 data = np.fromstring(stream.getvalue(), dtype=np.uint8)
                 img = cv2.imdecode(data,1)
                 cv2.imshow('original', img)
-                videoWriter.write(img)
+                self.videoWriter.write(img)
+                print('writing video')
                 self.nextFrame(img) 
             except Exception as e:
                 print("Socket Error: whiteboardView.whiteboardView.runVideo")
@@ -295,13 +325,19 @@ class WhiteboardView:
             ret, img = cap.read()
 
 
+    # called by Master whiteboard to close all sockets and save/delete video found
     def close(self):
+        self.videoWriter.release()
+        if self.debug:
+            print('whiteboardView.close')
         self.s.close()
         if self.videoName is None:
-            os.remove('output.avi')    
+            os.remove('whiteboardVideo.avi')    
+            pass
         else:
-            os.rename('output.avi', self.videoName)
-        cv2.DestroyAllWindows()
+            os.rename('whiteboardVideo.avi', self.videoName)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
         
 def main():
     from whiteboardView import cvHelper
