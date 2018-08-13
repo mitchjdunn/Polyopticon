@@ -23,3 +23,7 @@ Ubuntu Based Systems:
 
 RHEL Based Systems:
 `dnf install python3-pillow python3-pillow-tk python3-tkinter`
+
+
+## Demo
+There is a demo video at the root of this repository to show what the project looks like running
